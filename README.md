@@ -1,160 +1,104 @@
 # HPC SSH Key Portal
 
-**Production-ready secure portal for managing SSH keys used to access HPC systems.**
+A secure web portal to manage SSH keys for HPC hosts: import/generate keys, enforce policy, apply keys to managed hosts, and audit actions.
 
-## Overview
-
-Centralized SSH key lifecycle management with LDAP/AD authentication, policy enforcement, audit logging, and atomic key deployment to managed hosts.
-
-### Key Features
-- **SSH Key Management**: Import, generate, preview, revoke keys with expiry tracking
-- **Authentication**: LDAP/Active Directory integration with JWT tokens
-- **Policy Enforcement**: Configurable algorithms, key lengths, TTL, and options
-- **Audit Logging**: Comprehensive activity tracking with search/export
-- **Security**: Rate limiting, encrypted storage, role-based access control
-- **Modern UI**: Responsive React frontend with clean, professional design
-
-## Technology Stack
-
-- **Backend**: Python FastAPI + SQLAlchemy + SQLite (production: PostgreSQL)
-- **Frontend**: React + TypeScript + Tailwind CSS
-- **Auth**: LDAP3 + JWT tokens
-- **Database**: SQLite (dev) / PostgreSQL (prod)
-
-## Quick Start
-
-### Prerequisites
-- Python 3.9+ and Node.js 18+
-- LDAP/AD server for authentication
-
-### Installation
-```bash
-# Clone/navigate to project
-cd "SSH keys portal"
-
-# Install all dependencies
-npm run install:all
-
-# Configure environment
-cp env.example .env
-# Edit .env with your LDAP/DB settings
-```
-
-### Development
-```bash
-# Start both servers (backend: 3000, frontend: 3001)
-npm run dev
-```
-
-### Production
-```bash
-# Build frontend
-npm run build
-
-# Start production server
-npm start
-```
-
-## Verification Checklist
-
-### 1. Backend Health
-```bash
-curl http://localhost:3000/health
-# Expected: {"success":true,"message":"HPC SSH Key Portal is running"}
-```
-
-### 2. Database Schema
-```bash
-ls backend-py/hpc_ssh_portal.db
-# Expected: SQLite database file created
-```
-
-### 3. SSH Key Preview (No Auth Required)
-```bash
-curl -X POST http://localhost:3000/api/v1/me/keys/preview \
-  -H "Content-Type: application/json" \
-  -d '{"publicKey":"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG4rT3vTt99Ox5kndS4HmgTrKBT8F0E6fBYM6RQ4fd7A test"}'
-# Expected: 401 error (correct - auth required)
-```
-
-### 4. Frontend Access
-- Navigate to http://localhost:3001
-- Should see login screen with HPC SSH Key Portal branding
-- Form should be responsive and accessible
-
-### 5. End-to-End Flow (With LDAP)
-1. Configure LDAP settings in `.env`
-2. Login via UI with directory credentials
-3. Import/preview SSH keys
-4. Generate system keys with one-time download
-5. View audit logs (admin/auditor role)
-
-## API Endpoints
-
-### Authentication
-- `POST /api/v1/auth/login` - LDAP login → JWT token
-- `POST /api/v1/auth/logout` - Logout (audit only)
-
-### SSH Key Management
-- `GET /api/v1/me/keys` - List user's keys
-- `POST /api/v1/me/keys/preview` - Preview key before import
-- `POST /api/v1/me/keys` - Import public key
-- `POST /api/v1/me/keys/generate` - Generate key pair
-- `DELETE /api/v1/me/keys/{id}` - Revoke key
-
-### Downloads
-- `GET /api/v1/keys/requests/{id}/download?token=...` - One-time private key download
-
-## Security Features
-
-- **LDAP/AD Authentication**: Enterprise directory integration
-- **JWT Tokens**: Stateless authentication with configurable expiry
-- **Role-Based Access**: User/Admin/Auditor permissions
-- **Input Validation**: Comprehensive request validation
-- **Audit Logging**: All actions logged with IP, user-agent, metadata
-- **Rate Limiting**: Built-in protection against abuse
-- **Encrypted Storage**: System-generated private keys encrypted at rest
-- **CORS Protection**: Configured for frontend origin
-
-## Configuration
-
-Key environment variables in `.env`:
-
-```bash
-# Database (SQLite for dev, PostgreSQL for prod)
-DB_NAME=hpc_ssh_portal
-
-# Security
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
-SYSGEN_ENCRYPTION_KEY=your-encryption-key-for-private-keys
-
-# LDAP/AD
-LDAP_URL=ldap://your-domain-controller:389
-LDAP_BASE_DN=dc=example,dc=com
-LDAP_USER_FILTER=(cn={username})
-
-# Server
-PORT=3000
-FRONTEND_URL=http://localhost:3001
-```
-
-## Project Status
-
-✅ **Complete Implementation**: All SRS requirements implemented  
-✅ **Security Hardened**: Production-grade security controls  
-✅ **Clean Code**: Minimal comments, clear structure, no test files  
-✅ **Modern UI**: Professional React interface  
-✅ **Database Ready**: Auto-migrating schema  
-✅ **API Complete**: All endpoints functional  
-
-## Next Steps for Production
-
-1. **Database**: Switch to PostgreSQL for production
-2. **LDAP**: Configure real directory server settings
-3. **Secrets**: Generate strong JWT_SECRET and SYSGEN_ENCRYPTION_KEY
-4. **TLS**: Deploy behind reverse proxy with SSL termination
-5. **Monitoring**: Add health checks and log aggregation
+## Stack
+- Backend: FastAPI, SQLAlchemy, JWT, LDAP (optional), Paramiko (SSH apply)
+- Frontend: React (CRA), TypeScript, Tailwind styles
+- DB: SQLite (dev) or PostgreSQL (prod)
 
 ---
+## 1) Quick Start (Development / Demo)
+### Backend
+Create a local env file and run the API.
+```bash
+cd backend-py
+cat > .env <<'EOF'
+ENV=development
+ALLOW_TEST_LOGIN=true
+JWT_SECRET=dev-secret
+SYSGEN_ENCRYPTION_KEY=dev-sysgen
+APPLY_SSH_USER=root
+APPLY_SSH_KEY_PATH=~/.ssh/id_rsa
+APPLY_STRICT_HOST_KEY_CHECK=false
+EOF
 
-**Ready for supervisor review and demonstration.** # SSH-Kyes-Portal
+python3 -m pip install --break-system-packages -r requirements.txt
+python3 -m uvicorn app.main:app --host 0.0.0.0 --port 3000
+```
+
+### Frontend
+```bash
+cd frontend
+cat > .env <<'EOF'
+REACT_APP_ALLOW_TEST_LOGIN=true
+EOF
+npm install --legacy-peer-deps
+npm start
+```
+Open http://localhost:3001
+
+### Demo credentials
+- User: demo / demo
+- Admin: admin / admin
+- Auditor: auditor / auditor
+
+### What you can do
+- Users: Import or Generate key (system-side generation gives a one-time private key download link)
+- Admins: Click “Admin” → Add managed hosts → Apply to all hosts (writes authorized_keys via SSH)
+
+---
+## 2) Production Setup (Handoff)
+Use PostgreSQL, LDAP login, and real SSH automation.
+
+### Backend .env (example)
+```bash
+ENV=production
+DATABASE_URL=postgresql+psycopg2://USER:PASSWORD@HOST:5432/DBNAME
+JWT_SECRET=change-me-strong
+ALLOW_TEST_LOGIN=false
+LDAP_URL=ldap://your-ldap:389
+LDAP_BASE_DN=dc=example,dc=com
+LDAP_USER_FILTER=(cn={username})
+SYSGEN_ENCRYPTION_KEY=change-me-strong
+FRONTEND_URL=https://your-frontend
+APPLY_SSH_USER=automation
+APPLY_SSH_KEY_PATH=/etc/portal/ssh_automation_key
+APPLY_STRICT_HOST_KEY_CHECK=true
+```
+Install Postgres driver and run:
+```bash
+cd backend-py
+python3 -m pip install --break-system-packages psycopg2-binary
+python3 -m pip install --break-system-packages -r requirements.txt
+python3 -m uvicorn app.main:app --host 0.0.0.0 --port 3000
+```
+
+### Frontend build
+```bash
+cd frontend
+npm run build
+```
+Serve `frontend/build` with your reverse proxy; proxy `/api` to the backend (port 3000).
+
+---
+## 3) Admin Apply (SSH)
+- The portal renders authorized_keys from all active keys and writes atomically to each host.
+- Configure `APPLY_SSH_USER` and `APPLY_SSH_KEY_PATH` to an account/key permitted to manage files for target users.
+- In UI: Admin → Trigger Apply (enter the target Linux username).
+
+---
+## 4) Tips & Troubleshooting
+- Stuck on login loop: clear browser storage
+```js
+localStorage.clear(); sessionStorage.clear(); location.reload();
+```
+- One-time private key link: can be used only once and expires (default 10 min). Generate again if expired or already used.
+- SSH apply errors: verify SSH reachability/port 22, key permissions, and that the target user exists. Check backend logs.
+- Dev DB: SQLite file `hpc_ssh_portal.db` in repo root. Prod DB: set `DATABASE_URL` to Postgres.
+
+---
+## 5) API Health
+Backend health: `GET http://localhost:3000/health` → `{ success: true }`
+
+That’s it. For any deployment detail you want automated (systemd, Nginx config), ask to generate the files.
