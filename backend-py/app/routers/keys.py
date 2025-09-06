@@ -8,6 +8,7 @@ from ..utils.ssh import validate_public_key, parse_metadata, fingerprint_sha256,
 from ..services.audit import log_audit
 from ..services.policy import PolicyService
 from ..services.deploy import queue_apply_for_user
+from ..services.security import SecurityService
 from datetime import datetime, timedelta
 import secrets
 from ..core.config import settings
@@ -69,12 +70,31 @@ async def preview_key(
 	algorithm, bit_length = parse_metadata(preview_data.publicKey)
 	fingerprint = fingerprint_sha256(preview_data.publicKey)
 	
+	# Get policy for comment normalization and validation
+	policy_errors = PolicyService.validate_key_against_policy(
+		db, algorithm, bit_length, 
+		getattr(preview_data, 'comment', None),
+		getattr(preview_data, 'authorizedKeysOptions', None),
+		user.id
+	)
+	
+	# Normalize comment if provided
+	normalized_comment = None
+	if hasattr(preview_data, 'comment') and preview_data.comment:
+		# Basic comment normalization: strip whitespace, limit length
+		normalized_comment = preview_data.comment.strip()[:255]
+	
 	return ApiResponse(
 		success=True,
 		data={
 			"algorithm": algorithm,
 			"bitLength": bit_length,
-			"fingerprint": fingerprint
+			"fingerprint": fingerprint,
+			"normalizedComment": normalized_comment,
+			"policyValidation": {
+				"isValid": len(policy_errors) == 0,
+				"errors": policy_errors
+			}
 		}
 	)
 
@@ -86,6 +106,16 @@ async def import_key(
 ):
 	user = get_current_user_from_auth(request, db)
 	source_ip = get_client_ip(request)
+	
+	# Check for security lockout
+	is_locked, lockout_reason = SecurityService.check_lockout(db, user.id)
+	if is_locked:
+		raise HTTPException(status_code=429, detail=lockout_reason)
+	
+	# Check rate limiting
+	is_allowed, rate_limit_error = SecurityService.check_rate_limit(db, user.id, 'import')
+	if not is_allowed:
+		raise HTTPException(status_code=429, detail=rate_limit_error)
 	
 	# Validate key format
 	if not validate_public_key(import_data.publicKey):
@@ -144,6 +174,9 @@ async def import_key(
 	# Queue apply operations for this user
 	queue_apply_for_user(db, user.id)
 	
+	# Record operation for rate limiting
+	SecurityService.record_operation(db, user.id, 'import')
+	
 	return ApiResponse(
 		success=True,
 		data={
@@ -171,6 +204,16 @@ async def generate_key(
 ):
 	user = get_current_user_from_auth(request, db)
 	source_ip = get_client_ip(request)
+	
+	# Check for security lockout
+	is_locked, lockout_reason = SecurityService.check_lockout(db, user.id)
+	if is_locked:
+		raise HTTPException(status_code=429, detail=lockout_reason)
+	
+	# Check rate limiting
+	is_allowed, rate_limit_error = SecurityService.check_rate_limit(db, user.id, 'generate')
+	if not is_allowed:
+		raise HTTPException(status_code=429, detail=rate_limit_error)
 	
 	# Generate key pair
 	public_key, private_key = generate_system_keypair(generate_data.algorithm, generate_data.bitLength)
@@ -237,6 +280,9 @@ async def generate_key(
 	
 	# Queue apply operations for this user
 	queue_apply_for_user(db, user.id)
+	
+	# Record operation for rate limiting
+	SecurityService.record_operation(db, user.id, 'generate')
 
 	return ApiResponse(
 		success=True,
@@ -397,15 +443,29 @@ async def get_key_deployment_status(
 			Deployment.user_host_account_id == account.id
 		).order_by(Deployment.started_at.desc()).first()
 		
+		# Enhanced status information
+		deployment_health = "unknown"
+		if latest_deployment:
+			if latest_deployment.status == "success":
+				deployment_health = "healthy"
+			elif latest_deployment.status == "failed":
+				deployment_health = "error"
+			elif latest_deployment.status in ["pending", "running"]:
+				deployment_health = "syncing"
+		
 		account_status = {
 			"host_id": account.host_id,
 			"hostname": account.host.hostname,
+			"address": account.host.address,
 			"remote_username": account.remote_username,
 			"deployment_status": latest_deployment.status if latest_deployment else "never_deployed",
+			"deployment_health": deployment_health,
 			"last_applied": latest_deployment.finished_at.isoformat() if latest_deployment and latest_deployment.finished_at else None,
+			"last_attempt": latest_deployment.started_at.isoformat() if latest_deployment and latest_deployment.started_at else None,
 			"key_count": latest_deployment.key_count if latest_deployment else 0,
 			"checksum": latest_deployment.checksum if latest_deployment else None,
-			"error": latest_deployment.error if latest_deployment and latest_deployment.status == 'failed' else None
+			"error": latest_deployment.error if latest_deployment and latest_deployment.status == 'failed' else None,
+			"retry_count": latest_deployment.retry_count if latest_deployment else 0
 		}
 		status_data.append(account_status)
 	
@@ -417,13 +477,32 @@ async def get_key_deployment_status(
 	
 	key_status = []
 	for key in keys:
+		# Calculate expiry status
+		expiry_status = "valid"
+		days_until_expiry = None
+		if key.expires_at:
+			days_until_expiry = (key.expires_at - datetime.utcnow()).days
+			if days_until_expiry <= 0:
+				expiry_status = "expired"
+			elif days_until_expiry <= 7:
+				expiry_status = "expiring_soon"
+			elif days_until_expiry <= 30:
+				expiry_status = "expiring_this_month"
+		
 		key_info = {
 			"id": key.id,
 			"algorithm": key.algorithm,
+			"bit_length": key.bit_length,
 			"fingerprint_sha256": key.fingerprint_sha256[:16] + "...",
 			"comment": key.comment,
+			"origin": key.origin,
+			"status": key.status,
 			"expires_at": key.expires_at.isoformat() if key.expires_at else None,
-			"last_applied_at": key.last_applied_at.isoformat() if key.last_applied_at else None
+			"expiry_status": expiry_status,
+			"days_until_expiry": days_until_expiry,
+			"last_applied_at": key.last_applied_at.isoformat() if key.last_applied_at else None,
+			"created_at": key.created_at.isoformat(),
+			"authorized_keys_options": key.authorized_keys_options
 		}
 		key_status.append(key_info)
 	
@@ -436,7 +515,12 @@ async def get_key_deployment_status(
 				"total_hosts": len(status_data),
 				"active_keys": len(key_status),
 				"successful_deployments": len([s for s in status_data if s["deployment_status"] == "success"]),
-				"failed_deployments": len([s for s in status_data if s["deployment_status"] == "failed"])
+				"failed_deployments": len([s for s in status_data if s["deployment_status"] == "failed"]),
+				"pending_deployments": len([s for s in status_data if s["deployment_status"] in ["pending", "running"]]),
+				"never_deployed": len([s for s in status_data if s["deployment_status"] == "never_deployed"]),
+				"expiring_keys": len([k for k in key_status if k["expiry_status"] in ["expiring_soon", "expiring_this_month"]]),
+				"expired_keys": len([k for k in key_status if k["expiry_status"] == "expired"]),
+				"overall_health": "healthy" if all(s["deployment_health"] == "healthy" for s in status_data) else "degraded" if any(s["deployment_health"] == "error" for s in status_data) else "syncing" if any(s["deployment_health"] == "syncing" for s in status_data) else "unknown"
 			}
 		}
 	) 

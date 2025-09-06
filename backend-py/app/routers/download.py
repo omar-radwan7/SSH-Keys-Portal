@@ -4,6 +4,7 @@ from ..core.deps import get_db
 from ..models import SystemGenRequest
 from ..utils.ssh import decrypt_private_key
 from ..services.audit import log_audit
+from ..services.security import SecurityService
 from ..core.config import settings
 from datetime import datetime
 
@@ -32,10 +33,22 @@ async def download_private_key(
 	).first()
 	
 	if not gen_request:
+		# Record failed pickup attempt if we have user context
+		# Note: We can't easily get user_id from token alone, but we could enhance this
 		raise HTTPException(
 			status_code=404,
 			detail="Download link not found or expired"
 		)
+	
+	# Check for security lockout
+	is_locked, lockout_reason = SecurityService.check_lockout(db, gen_request.user_id)
+	if is_locked:
+		raise HTTPException(status_code=429, detail=lockout_reason)
+	
+	# Check rate limiting for downloads
+	is_allowed, rate_limit_error = SecurityService.check_rate_limit(db, gen_request.user_id, 'download')
+	if not is_allowed:
+		raise HTTPException(status_code=429, detail=rate_limit_error)
 	
 	# Check if already downloaded
 	if gen_request.downloaded_at:
@@ -56,6 +69,9 @@ async def download_private_key(
 	# Mark as downloaded
 	gen_request.downloaded_at = datetime.utcnow()
 	db.commit()
+	
+	# Record operation for rate limiting
+	SecurityService.record_operation(db, gen_request.user_id, 'download')
 	
 	# Log download event
 	log_audit(

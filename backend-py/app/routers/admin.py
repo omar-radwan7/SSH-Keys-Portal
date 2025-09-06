@@ -8,6 +8,7 @@ from .keys import get_current_user_from_auth
 from ..services.deploy import render_authorized_keys, apply_to_host
 from ..services.policy import PolicyService
 from ..services.audit import log_audit
+from ..services.security import SecurityService
 from datetime import datetime, timedelta
 import csv
 import json
@@ -603,4 +604,89 @@ async def update_user_status(
 	return ApiResponse(
 		success=True, 
 		message=f"Updated {target_user.username} status from {old_status} to {new_status}"
+	)
+
+@router.get("/security/alerts", response_model=ApiResponse)
+async def get_security_alerts(
+	request: Request,
+	acknowledged: Optional[bool] = Query(None, description="Filter by acknowledgment status"),
+	db: Session = Depends(get_db)
+):
+	"""Get security alerts for admin monitoring"""
+	user = get_current_user_from_auth(request, db)
+	if user.role != 'admin':
+		raise HTTPException(status_code=403, detail="Admin access required")
+	
+	alerts = SecurityService.get_security_alerts(db, acknowledged)
+	
+	return ApiResponse(
+		success=True,
+		data={
+			"alerts": [
+				{
+					"id": alert.id,
+					"alert_type": alert.alert_type,
+					"severity": alert.severity,
+					"description": alert.description,
+					"metadata": json.loads(alert.alert_metadata) if alert.alert_metadata else {},
+					"acknowledged": alert.acknowledged,
+					"acknowledged_by": alert.acknowledged_by,
+					"acknowledged_at": alert.acknowledged_at.isoformat() if alert.acknowledged_at else None,
+					"created_at": alert.created_at.isoformat()
+				}
+				for alert in alerts
+			]
+		}
+	)
+
+@router.post("/security/alerts/{alert_id}/acknowledge", response_model=ApiResponse)
+async def acknowledge_security_alert(
+	alert_id: str,
+	request: Request,
+	db: Session = Depends(get_db)
+):
+	"""Acknowledge a security alert"""
+	user = get_current_user_from_auth(request, db)
+	if user.role != 'admin':
+		raise HTTPException(status_code=403, detail="Admin access required")
+	
+	SecurityService.acknowledge_alert(db, alert_id, user.id)
+	
+	log_audit(
+		db, actor_user_id=user.id, action="security_alert_acknowledged",
+		entity="security_alert", entity_id=alert_id,
+		metadata={"alert_id": alert_id},
+		source_ip=request.client.host if request.client else "0.0.0.0",
+		user_agent=request.headers.get("user-agent", "")
+	)
+	
+	return ApiResponse(success=True, message="Security alert acknowledged")
+
+@router.post("/security/detect-activity", response_model=ApiResponse)
+async def detect_unusual_activity(
+	request: Request,
+	db: Session = Depends(get_db)
+):
+	"""Manually trigger unusual activity detection"""
+	user = get_current_user_from_auth(request, db)
+	if user.role != 'admin':
+		raise HTTPException(status_code=403, detail="Admin access required")
+	
+	alerts = SecurityService.detect_unusual_activity(db)
+	
+	log_audit(
+		db, actor_user_id=user.id, action="security_scan_triggered",
+		entity="system", entity_id="security",
+		metadata={"alerts_found": len(alerts)},
+		source_ip=request.client.host if request.client else "0.0.0.0",
+		user_agent=request.headers.get("user-agent", "")
+	)
+	
+	return ApiResponse(
+		success=True,
+		data={
+			"alerts_detected": len(alerts),
+			"alerts": alerts
+		},
+		message=f"Security scan completed. {len(alerts)} new alerts detected."
 	) 

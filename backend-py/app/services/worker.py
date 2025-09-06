@@ -6,6 +6,7 @@ from ..core.db import SessionLocal
 from ..models import ApplyQueue, UserHostAccount, Deployment
 from .deploy import render_authorized_keys_for_account, apply_to_host_account
 from .audit import log_audit
+from .security import SecurityService
 from datetime import datetime, timedelta
 import time
 
@@ -252,6 +253,34 @@ class MaintenanceWorker:
             
             if old_gen_requests:
                 logger.info(f"Cleaned up {len(old_gen_requests)} old system generation requests")
+            
+            # 5. Security monitoring - detect unusual activity
+            try:
+                alerts = SecurityService.detect_unusual_activity(db)
+                if alerts:
+                    logger.info(f"Security scan detected {len(alerts)} new alerts")
+                    
+                    # Queue notifications for critical alerts
+                    from ..models import NotificationQueue
+                    for alert in alerts:
+                        if alert.get('severity') in ['high', 'critical']:
+                            notification = NotificationQueue(
+                                user_id=None,  # System notification
+                                notification_type='security_alert',
+                                subject=f"Security Alert: {alert['type']}",
+                                message=alert['description'],
+                                status='queued',
+                                metadata={'alert_type': alert['type'], 'severity': alert['severity']}
+                            )
+                            db.add(notification)
+            except Exception as e:
+                logger.error(f"Security monitoring failed: {e}")
+            
+            # 6. Clean up old security records
+            try:
+                SecurityService.cleanup_old_records(db)
+            except Exception as e:
+                logger.error(f"Security cleanup failed: {e}")
             
             db.commit()
             

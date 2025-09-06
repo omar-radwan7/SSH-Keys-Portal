@@ -18,11 +18,15 @@ class LoginResponse(BaseModel):
 
 class KeyPreviewRequest(BaseModel):
 	publicKey: str
+	comment: Optional[str] = None
+	authorizedKeysOptions: Optional[str] = None
 
 class KeyPreviewResponse(BaseModel):
 	algorithm: str
 	bitLength: int
 	fingerprint: str
+	normalizedComment: Optional[str] = None
+	policyValidation: dict
 
 class ImportKeyRequest(BaseModel):
 	publicKey: str
