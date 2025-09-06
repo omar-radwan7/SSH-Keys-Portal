@@ -5,6 +5,7 @@ import apiService from '../services/api';
 import { Key, Plus, Trash2, Download, AlertTriangle, CheckCircle, Clock, XCircle } from 'lucide-react';
 import ImportKeyModal from './ImportKeyModal';
 import GenerateKeyModal from './GenerateKeyModal';
+import ClientGenerateKeyModal from './ClientGenerateKeyModal';
 import { Link } from 'react-router-dom';
 
 const Dashboard: React.FC = () => {
@@ -13,6 +14,7 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [showClientGenerateModal, setShowClientGenerateModal] = useState(false);
 
   useEffect(() => {
     loadKeys();
@@ -112,25 +114,9 @@ const Dashboard: React.FC = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Actions Bar */}
-        <div className="flex justify-between items-center mb-8">
+        {/* Page Title */}
+        <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900">My SSH Keys</h2>
-          <div className="flex space-x-3">
-            <button
-              onClick={() => setShowImportModal(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Import Key</span>
-            </button>
-            <button
-              onClick={() => setShowGenerateModal(true)}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2"
-            >
-              <Download className="w-4 h-4" />
-              <span>Generate Key</span>
-            </button>
-          </div>
         </div>
 
         {/* SSH Keys List */}
@@ -147,10 +133,16 @@ const Dashboard: React.FC = () => {
                 Import Key
               </button>
               <button
-                onClick={() => setShowGenerateModal(true)}
+                onClick={() => setShowClientGenerateModal(true)}
                 className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium"
               >
-                Generate Key
+                Generate Key (Client)
+              </button>
+              <button
+                onClick={() => setShowGenerateModal(true)}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium"
+              >
+                Generate Key (Server)
               </button>
             </div>
           </div>
@@ -221,6 +213,32 @@ const Dashboard: React.FC = () => {
                 </tbody>
               </table>
             </div>
+            {/* Add Key Actions */}
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+              <div className="flex justify-center space-x-3">
+                <button
+                  onClick={() => setShowImportModal(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Import Key</span>
+                </button>
+                <button
+                  onClick={() => setShowClientGenerateModal(true)}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2"
+                >
+                  <Key className="w-4 h-4" />
+                  <span>Generate Key (Client)</span>
+                </button>
+                <button
+                  onClick={() => setShowGenerateModal(true)}
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Generate Key (Server)</span>
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </main>
@@ -245,8 +263,18 @@ const Dashboard: React.FC = () => {
           }}
         />
       )}
+
+      {showClientGenerateModal && (
+        <ClientGenerateKeyModal
+          onClose={() => setShowClientGenerateModal(false)}
+          onSuccess={() => {
+            setShowClientGenerateModal(false);
+            loadKeys();
+          }}
+        />
+      )}
     </div>
   );
-};
-
-export default Dashboard; 
+  };
+  
+  export default Dashboard; 

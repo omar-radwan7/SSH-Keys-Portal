@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Text, Boolean, DateTime, ForeignKey, CheckConstraint, text
+from sqlalchemy import Column, String, Integer, Text, Boolean, DateTime, ForeignKey, CheckConstraint, text, JSON
 from sqlalchemy.dialects.postgresql import INET, JSONB
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -22,6 +22,7 @@ class User(Base):
 	)
 
 	ssh_keys = relationship("SSHKey", back_populates="user", cascade="all,delete")
+	account_bindings = relationship("UserHostAccount", back_populates="user", cascade="all,delete")
 
 class SSHKey(Base):
 	__tablename__ = "ssh_keys"
@@ -37,6 +38,7 @@ class SSHKey(Base):
 	status = Column(String(20), nullable=False, default='active')
 	authorized_keys_options = Column(Text)
 	created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+	last_applied_at = Column(DateTime(timezone=True))
 
 	__table_args__ = (
 		CheckConstraint("origin in ('import','client_gen','system_gen')"),
@@ -54,27 +56,54 @@ class ManagedHost(Base):
 	last_seen_at = Column(DateTime(timezone=True))
 	created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
 
+	account_bindings = relationship("UserHostAccount", back_populates="host", cascade="all,delete")
+	deployments = relationship("Deployment", back_populates="host", cascade="all,delete")
+
+class UserHostAccount(Base):
+	__tablename__ = "user_host_accounts"
+	id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+	user_id = Column(String(36), ForeignKey('users.id', ondelete='CASCADE'))
+	host_id = Column(String(36), ForeignKey('managed_hosts.id', ondelete='CASCADE'))
+	remote_username = Column(String(255), nullable=False)
+	status = Column(String(20), nullable=False, default='active')
+	created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+
+	__table_args__ = (
+		CheckConstraint("status in ('active','disabled')"),
+	)
+
+	user = relationship("User", back_populates="account_bindings")
+	host = relationship("ManagedHost", back_populates="account_bindings")
+	deployments = relationship("Deployment", back_populates="user_host_account", cascade="all,delete")
+
 class Deployment(Base):
 	__tablename__ = "deployments"
 	id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
 	host_id = Column(String(36), ForeignKey('managed_hosts.id', ondelete='CASCADE'))
-	username = Column(String(255), nullable=False)
+	user_host_account_id = Column(String(36), ForeignKey('user_host_accounts.id', ondelete='CASCADE'))
 	generation = Column(Integer, nullable=False)
 	status = Column(String(20), nullable=False, default='pending')
 	checksum = Column(String(64))
+	key_count = Column(Integer, default=0)
 	started_at = Column(DateTime(timezone=True), default=datetime.utcnow)
 	finished_at = Column(DateTime(timezone=True))
 	error = Column(Text)
+	retry_count = Column(Integer, default=0)
 
 	__table_args__ = (
-		CheckConstraint("status in ('pending','success','failed')"),
+		CheckConstraint("status in ('pending','running','success','failed','cancelled')"),
 	)
+
+	host = relationship("ManagedHost", back_populates="deployments")
+	user_host_account = relationship("UserHostAccount", back_populates="deployments")
 
 class Policy(Base):
 	__tablename__ = "policies"
 	id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-	rules_json = Column(Text, nullable=False)  # JSON as TEXT for SQLite
+	name = Column(String(255), nullable=False)
+	rules = Column(JSON, nullable=False)  # Structured policy rules
 	is_active = Column(Boolean, nullable=False, default=False)
+	created_by = Column(String(36), ForeignKey('users.id'))
 	created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
 
 class AuditEvent(Base):
@@ -85,7 +114,7 @@ class AuditEvent(Base):
 	action = Column(String(100), nullable=False)
 	entity = Column(String(50), nullable=False)
 	entity_id = Column(String(255))
-	metadata_json = Column(Text)  # JSON as TEXT for SQLite
+	metadata_json = Column(Text)  # JSON as TEXT for SQLite compatibility
 	source_ip = Column(String(45))  # IP as string for SQLite
 	user_agent = Column(Text)
 
@@ -99,4 +128,39 @@ class SystemGenRequest(Base):
 	download_token = Column(String(255), unique=True, nullable=False)
 	expires_at = Column(DateTime(timezone=True), nullable=False)
 	downloaded_at = Column(DateTime(timezone=True))
-	created_at = Column(DateTime(timezone=True), default=datetime.utcnow) 
+	created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+
+class ApplyQueue(Base):
+	__tablename__ = "apply_queue"
+	id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+	user_host_account_id = Column(String(36), ForeignKey('user_host_accounts.id', ondelete='CASCADE'))
+	priority = Column(Integer, default=0)
+	status = Column(String(20), nullable=False, default='queued')
+	scheduled_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+	started_at = Column(DateTime(timezone=True))
+	finished_at = Column(DateTime(timezone=True))
+	error = Column(Text)
+	retry_count = Column(Integer, default=0)
+	created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+
+	__table_args__ = (
+		CheckConstraint("status in ('queued','running','completed','failed','cancelled')"),
+	)
+
+class NotificationQueue(Base):
+	__tablename__ = "notification_queue"
+	id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+	user_id = Column(String(36), ForeignKey('users.id', ondelete='CASCADE'))
+	notification_type = Column(String(50), nullable=False)
+	subject = Column(String(255), nullable=False)
+	message = Column(Text, nullable=False)
+	status = Column(String(20), nullable=False, default='queued')
+	scheduled_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+	sent_at = Column(DateTime(timezone=True))
+	error = Column(Text)
+	created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+
+	__table_args__ = (
+		CheckConstraint("status in ('queued','sent','failed')"),
+		CheckConstraint("notification_type in ('expiry_reminder','key_generated','key_revoked','apply_failed','emergency_revoke')"),
+	) 

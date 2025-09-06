@@ -6,6 +6,8 @@ from ..models import User, SSHKey, SystemGenRequest
 from ..schemas import KeyPreviewRequest, KeyPreviewResponse, ImportKeyRequest, SSHKeyOut, GenerateKeyRequest, GenerateKeyResponse, ApiResponse
 from ..utils.ssh import validate_public_key, parse_metadata, fingerprint_sha256, generate_system_keypair, encrypt_private_key
 from ..services.audit import log_audit
+from ..services.policy import PolicyService
+from ..services.deploy import queue_apply_for_user
 from datetime import datetime, timedelta
 import secrets
 from ..core.config import settings
@@ -98,17 +100,16 @@ async def import_key(
 	if existing:
 		raise HTTPException(status_code=400, detail="SSH key with this fingerprint already exists")
 	
-	# Check max keys per user (default policy: 5)
-	user_key_count = db.query(SSHKey).filter(
-		SSHKey.user_id == user.id, 
-		SSHKey.status == 'active'
-	).count()
+	# Validate against policy
+	policy_errors = PolicyService.validate_key_against_policy(
+		db, algorithm, bit_length, import_data.comment, 
+		import_data.authorizedKeysOptions, user.id
+	)
+	if policy_errors:
+		raise HTTPException(status_code=400, detail="; ".join(policy_errors))
 	
-	if user_key_count >= 5:  # Default policy limit
-		raise HTTPException(status_code=400, detail="Maximum number of keys per user exceeded")
-	
-	# Set default expiry (1 year from now)
-	expires_at = import_data.expiresAt or (datetime.utcnow() + timedelta(days=365))
+	# Set default expiry from policy
+	expires_at = import_data.expiresAt or PolicyService.get_default_expiry(db)
 	
 	# Create SSH key record
 	ssh_key = SSHKey(
@@ -139,6 +140,9 @@ async def import_key(
 		},
 		source_ip=source_ip, user_agent=request.headers.get("user-agent", "")
 	)
+	
+	# Queue apply operations for this user
+	queue_apply_for_user(db, user.id)
 	
 	return ApiResponse(
 		success=True,
@@ -180,6 +184,13 @@ async def generate_key(
 	if existing:
 		raise HTTPException(status_code=400, detail="SSH key with this fingerprint already exists")
 	
+	# Validate against policy
+	policy_errors = PolicyService.validate_key_against_policy(
+		db, algorithm, bit_length, user_id=user.id
+	)
+	if policy_errors:
+		raise HTTPException(status_code=400, detail="; ".join(policy_errors))
+	
 	# Create SSH key record for user
 	ssh_key = SSHKey(
 		user_id=user.id,
@@ -189,7 +200,7 @@ async def generate_key(
 		comment=f"generated@{datetime.utcnow().isoformat()}",
 		fingerprint_sha256=fingerprint,
 		origin='system_gen',
-		expires_at=datetime.utcnow() + timedelta(days=365),
+		expires_at=PolicyService.get_default_expiry(db),
 	)
 	db.add(ssh_key)
 	db.commit()
@@ -223,6 +234,9 @@ async def generate_key(
 		},
 		source_ip=source_ip, user_agent=request.headers.get("user-agent", "")
 	)
+	
+	# Queue apply operations for this user
+	queue_apply_for_user(db, user.id)
 
 	return ApiResponse(
 		success=True,
@@ -267,4 +281,162 @@ async def revoke_key(
 		source_ip=source_ip, user_agent=request.headers.get("user-agent", "")
 	)
 	
-	return ApiResponse(success=True, message="SSH key revoked successfully") 
+	# Queue apply operations for this user
+	queue_apply_for_user(db, user.id)
+	
+	return ApiResponse(success=True, message="SSH key revoked successfully")
+
+@router.post("/{key_id}/rotate", response_model=ApiResponse)
+async def rotate_key(
+	key_id: str,
+	import_data: ImportKeyRequest,
+	request: Request,
+	db: Session = Depends(get_db)
+):
+	"""Rotate an existing key by replacing it with a new one"""
+	user = get_current_user_from_auth(request, db)
+	source_ip = get_client_ip(request)
+	
+	# Find the existing key
+	old_key = db.query(SSHKey).filter(
+		SSHKey.id == key_id,
+		SSHKey.user_id == user.id,
+		SSHKey.status == 'active'
+	).first()
+	
+	if not old_key:
+		raise HTTPException(status_code=404, detail="Active SSH key not found or access denied")
+	
+	# Validate new key format
+	if not validate_public_key(import_data.publicKey):
+		raise HTTPException(status_code=400, detail="Invalid SSH public key format")
+	
+	# Parse new key metadata
+	algorithm, bit_length = parse_metadata(import_data.publicKey)
+	fingerprint = fingerprint_sha256(import_data.publicKey)
+	
+	# Check for duplicate fingerprint
+	existing = db.query(SSHKey).filter(SSHKey.fingerprint_sha256 == fingerprint).first()
+	if existing:
+		raise HTTPException(status_code=400, detail="SSH key with this fingerprint already exists")
+	
+	# Validate against policy (don't count current key against max limit)
+	policy_errors = PolicyService.validate_key_against_policy(
+		db, algorithm, bit_length, import_data.comment, 
+		import_data.authorizedKeysOptions, None  # Skip user limit check for rotation
+	)
+	if policy_errors:
+		raise HTTPException(status_code=400, detail="; ".join(policy_errors))
+	
+	# Create new key
+	new_key = SSHKey(
+		user_id=user.id,
+		public_key=import_data.publicKey,
+		algorithm=algorithm,
+		bit_length=bit_length,
+		comment=import_data.comment or f"rotated from {old_key.comment or 'unnamed'}",
+		fingerprint_sha256=fingerprint,
+		origin='import',
+		expires_at=import_data.expiresAt or PolicyService.get_default_expiry(db),
+		authorized_keys_options=import_data.authorizedKeysOptions
+	)
+	
+	# Mark old key as deprecated (will be revoked after successful apply)
+	old_key.status = 'deprecated'
+	
+	db.add(new_key)
+	db.commit()
+	db.refresh(new_key)
+	
+	# Log audit events
+	log_audit(
+		db, actor_user_id=user.id, action="ssh_key_rotated",
+		entity="ssh_key", entity_id=new_key.id,
+		metadata={
+			"old_key_id": old_key.id,
+			"old_fingerprint": old_key.fingerprint_sha256,
+			"new_fingerprint": fingerprint,
+			"algorithm": algorithm
+		},
+		source_ip=source_ip, user_agent=request.headers.get("user-agent", "")
+	)
+	
+	# Queue apply operations for this user
+	queue_apply_for_user(db, user.id)
+	
+	return ApiResponse(
+		success=True,
+		data={
+			"new_key_id": new_key.id,
+			"old_key_id": old_key.id,
+			"fingerprint": fingerprint
+		},
+		message="SSH key rotated successfully. Old key will be revoked after deployment."
+	)
+
+@router.get("/status", response_model=ApiResponse)
+async def get_key_deployment_status(
+	request: Request,
+	db: Session = Depends(get_db)
+):
+	"""Get deployment status of user's keys across hosts"""
+	user = get_current_user_from_auth(request, db)
+	
+	from ..models import UserHostAccount, Deployment
+	
+	# Get user's host accounts
+	accounts = db.query(UserHostAccount).filter(
+		UserHostAccount.user_id == user.id,
+		UserHostAccount.status == 'active'
+	).all()
+	
+	status_data = []
+	for account in accounts:
+		# Get latest deployment for this account
+		latest_deployment = db.query(Deployment).filter(
+			Deployment.user_host_account_id == account.id
+		).order_by(Deployment.started_at.desc()).first()
+		
+		account_status = {
+			"host_id": account.host_id,
+			"hostname": account.host.hostname,
+			"remote_username": account.remote_username,
+			"deployment_status": latest_deployment.status if latest_deployment else "never_deployed",
+			"last_applied": latest_deployment.finished_at.isoformat() if latest_deployment and latest_deployment.finished_at else None,
+			"key_count": latest_deployment.key_count if latest_deployment else 0,
+			"checksum": latest_deployment.checksum if latest_deployment else None,
+			"error": latest_deployment.error if latest_deployment and latest_deployment.status == 'failed' else None
+		}
+		status_data.append(account_status)
+	
+	# Get user's active keys with last applied timestamp
+	keys = db.query(SSHKey).filter(
+		SSHKey.user_id == user.id,
+		SSHKey.status == 'active'
+	).all()
+	
+	key_status = []
+	for key in keys:
+		key_info = {
+			"id": key.id,
+			"algorithm": key.algorithm,
+			"fingerprint_sha256": key.fingerprint_sha256[:16] + "...",
+			"comment": key.comment,
+			"expires_at": key.expires_at.isoformat() if key.expires_at else None,
+			"last_applied_at": key.last_applied_at.isoformat() if key.last_applied_at else None
+		}
+		key_status.append(key_info)
+	
+	return ApiResponse(
+		success=True,
+		data={
+			"host_accounts": status_data,
+			"keys": key_status,
+			"summary": {
+				"total_hosts": len(status_data),
+				"active_keys": len(key_status),
+				"successful_deployments": len([s for s in status_data if s["deployment_status"] == "success"]),
+				"failed_deployments": len([s for s in status_data if s["deployment_status"] == "failed"])
+			}
+		}
+	) 

@@ -101,4 +101,21 @@ class AuditEventOut(BaseModel):
 	source_ip: Optional[str]
 	user_agent: Optional[str]
 	class Config:
+		from_attributes = True
+
+# User-Host Account schemas
+class UserHostAccountCreate(BaseModel):
+	user_id: str
+	host_id: str
+	remote_username: constr(strip_whitespace=True, min_length=1)
+	status: Optional[str] = "active"
+
+class UserHostAccountOut(BaseModel):
+	id: str
+	user_id: str
+	host_id: str
+	remote_username: str
+	status: str
+	created_at: datetime
+	class Config:
 		from_attributes = True 

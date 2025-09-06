@@ -1,7 +1,7 @@
 import base64
 import hashlib
 from typing import Tuple
-from cryptography.hazmat.primitives.asymmetric import rsa, ed25519
+from cryptography.hazmat.primitives.asymmetric import rsa, ed25519, ec
 from cryptography.hazmat.primitives import serialization
 from cryptography.fernet import Fernet
 import secrets
@@ -75,10 +75,83 @@ def generate_system_keypair(algorithm: str, bits: int) -> Tuple[str, str]:
 				private_key = f.read()
 			return public_key, private_key
 	
+	if algorithm == 'ecdsa-sha2-nistp256' and ssh_keygen:
+		with tempfile.TemporaryDirectory() as tmp:
+			key_path = os.path.join(tmp, "id_ecdsa")
+			subprocess.run([ssh_keygen, "-t", "ecdsa", "-b", "256", "-f", key_path, "-N", "", "-C", comment], check=True)
+			with open(key_path + ".pub", "r") as f:
+				public_key = f.read().strip()
+			with open(key_path, "r") as f:
+				private_key = f.read()
+			return public_key, private_key
+	
+	if algorithm == 'ecdsa-sha2-nistp384' and ssh_keygen:
+		with tempfile.TemporaryDirectory() as tmp:
+			key_path = os.path.join(tmp, "id_ecdsa")
+			subprocess.run([ssh_keygen, "-t", "ecdsa", "-b", "384", "-f", key_path, "-N", "", "-C", comment], check=True)
+			with open(key_path + ".pub", "r") as f:
+				public_key = f.read().strip()
+			with open(key_path, "r") as f:
+				private_key = f.read()
+			return public_key, private_key
+	
+	if algorithm == 'ecdsa-sha2-nistp521' and ssh_keygen:
+		with tempfile.TemporaryDirectory() as tmp:
+			key_path = os.path.join(tmp, "id_ecdsa")
+			subprocess.run([ssh_keygen, "-t", "ecdsa", "-b", "521", "-f", key_path, "-N", "", "-C", comment], check=True)
+			with open(key_path + ".pub", "r") as f:
+				public_key = f.read().strip()
+			with open(key_path, "r") as f:
+				private_key = f.read()
+			return public_key, private_key
+	
 	# Fallbacks
 	if algorithm == 'ssh-ed25519':
 		# Without ssh-keygen, we can only return PEM private and OpenSSH public; OpenSSH private format unavailable
 		priv = ed25519.Ed25519PrivateKey.generate()
+		pub = priv.public_key()
+		private_pem = priv.private_bytes(
+			encoding=serialization.Encoding.PEM,
+			format=serialization.PrivateFormat.PKCS8,
+			encryption_algorithm=serialization.NoEncryption(),
+		).decode()
+		public_openssh = pub.public_bytes(
+			encoding=serialization.Encoding.OpenSSH,
+			format=serialization.PublicFormat.OpenSSH,
+		).decode() + f" {comment}"
+		return public_openssh, private_pem
+	
+	# ECDSA fallbacks
+	if algorithm == 'ecdsa-sha2-nistp256':
+		priv = ec.generate_private_key(ec.SECP256R1())
+		pub = priv.public_key()
+		private_pem = priv.private_bytes(
+			encoding=serialization.Encoding.PEM,
+			format=serialization.PrivateFormat.PKCS8,
+			encryption_algorithm=serialization.NoEncryption(),
+		).decode()
+		public_openssh = pub.public_bytes(
+			encoding=serialization.Encoding.OpenSSH,
+			format=serialization.PublicFormat.OpenSSH,
+		).decode() + f" {comment}"
+		return public_openssh, private_pem
+	
+	if algorithm == 'ecdsa-sha2-nistp384':
+		priv = ec.generate_private_key(ec.SECP384R1())
+		pub = priv.public_key()
+		private_pem = priv.private_bytes(
+			encoding=serialization.Encoding.PEM,
+			format=serialization.PrivateFormat.PKCS8,
+			encryption_algorithm=serialization.NoEncryption(),
+		).decode()
+		public_openssh = pub.public_bytes(
+			encoding=serialization.Encoding.OpenSSH,
+			format=serialization.PublicFormat.OpenSSH,
+		).decode() + f" {comment}"
+		return public_openssh, private_pem
+	
+	if algorithm == 'ecdsa-sha2-nistp521':
+		priv = ec.generate_private_key(ec.SECP521R1())
 		pub = priv.public_key()
 		private_pem = priv.private_bytes(
 			encoding=serialization.Encoding.PEM,

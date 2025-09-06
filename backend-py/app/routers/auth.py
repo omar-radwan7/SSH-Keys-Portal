@@ -16,6 +16,31 @@ def get_client_ip(request: Request) -> str:
 		return forwarded.split(",")[0]
 	return request.client.host if request.client else "0.0.0.0"
 
+def determine_user_role(conn: Connection, user_dn: str) -> str:
+	"""Determine user role based on LDAP group membership"""
+	try:
+		# Check for admin groups
+		admin_groups = [g.strip() for g in settings.LDAP_ADMIN_GROUPS.split(',')]
+		for group_dn in admin_groups:
+			group_filter = settings.LDAP_GROUP_FILTER.format(user_dn=user_dn)
+			conn.search(group_dn, group_filter, SUBTREE)
+			if conn.entries:
+				return 'admin'
+		
+		# Check for auditor groups
+		auditor_groups = [g.strip() for g in settings.LDAP_AUDITOR_GROUPS.split(',')]
+		for group_dn in auditor_groups:
+			group_filter = settings.LDAP_GROUP_FILTER.format(user_dn=user_dn)
+			conn.search(group_dn, group_filter, SUBTREE)
+			if conn.entries:
+				return 'auditor'
+		
+		# Default to user role
+		return 'user'
+	except Exception:
+		# If group lookup fails, default to user role
+		return 'user'
+
 @router.post("/test-login", response_model=ApiResponse)
 async def test_login(
 	login_data: LoginRequest,
@@ -136,6 +161,11 @@ async def login(
 			conn.unbind()
 			raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 		ldap_user = conn.entries[0]
+		user_dn = ldap_user.entry_dn
+		
+		# Determine role based on group membership
+		role = determine_user_role(conn, user_dn)
+		
 		conn.unbind()
 		# Get or create local user
 		user = db.query(User).filter(User.external_id == login_data.username).first()
@@ -145,7 +175,7 @@ async def login(
 				username=login_data.username,
 				email=getattr(ldap_user, 'mail', None),
 				display_name=getattr(ldap_user, 'displayName', login_data.username),
-				role='user',
+				role=role,
 				status='active'
 			)
 			db.add(user); db.commit(); db.refresh(user)

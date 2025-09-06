@@ -94,6 +94,31 @@ class ApiService {
     return response.data;
   }
 
+  async rotateKey(
+    keyId: string,
+    publicKey: string,
+    comment?: string,
+    expiresAt?: string,
+    authorizedKeysOptions?: string
+  ): Promise<ApiResponse<SSHKey>> {
+    const response: AxiosResponse<ApiResponse<SSHKey>> = await this.api.post(`/me/keys/${keyId}/rotate`, {
+      publicKey,
+      comment,
+      expiresAt,
+      authorizedKeysOptions,
+    });
+    return response.data;
+  }
+
+  async getKeyStatus(): Promise<ApiResponse<{
+    host_accounts: any[];
+    keys: any[];
+    summary: any;
+  }>> {
+    const response: AxiosResponse<ApiResponse<any>> = await this.api.get('/me/keys/status');
+    return response.data;
+  }
+
   // Admin - Policies
   async getCurrentPolicy(): Promise<ApiResponse<PolicyRules>> {
     const response: AxiosResponse<ApiResponse<PolicyRules>> = await this.api.get('/admin/policies/current');
@@ -147,8 +172,72 @@ class ApiService {
   }
 
   // Admin - Apply
+  async queueApplyAll(): Promise<ApiResponse<{ queued_operations: number }>> {
+    const response: AxiosResponse<ApiResponse<{ queued_operations: number }>> = await this.api.post('/admin/apply');
+    return response.data;
+  }
+
+  async queueApplyForUser(userId: string): Promise<ApiResponse<{ queued_operations: number; user_id: string }>> {
+    const response: AxiosResponse<ApiResponse<{ queued_operations: number; user_id: string }>> = await this.api.post(`/admin/apply/user/${userId}`);
+    return response.data;
+  }
+
+  // Admin - Emergency Controls
+  async emergencyRevokeByFingerprint(fingerprint: string): Promise<ApiResponse<{ fingerprint: string; revoked_count: number; affected_users: number }>> {
+    const response: AxiosResponse<ApiResponse<any>> = await this.api.post('/admin/revoke/fingerprint', null, {
+      params: { fingerprint },
+    });
+    return response.data;
+  }
+
+  // Admin - Metrics and Monitoring
+  async getAdminMetrics(): Promise<ApiResponse<any>> {
+    const response: AxiosResponse<ApiResponse<any>> = await this.api.get('/admin/metrics');
+    return response.data;
+  }
+
+  async getDeployments(status?: string, hostId?: string, limit?: number): Promise<ApiResponse<{ deployments: any[] }>> {
+    const response: AxiosResponse<ApiResponse<any>> = await this.api.get('/admin/deployments', {
+      params: { status, host_id: hostId, limit },
+    });
+    return response.data;
+  }
+
+  // Admin - User Management
+  async getUsers(): Promise<ApiResponse<{ users: any[] }>> {
+    const response: AxiosResponse<ApiResponse<any>> = await this.api.get('/admin/users');
+    return response.data;
+  }
+
+  async updateUserRole(userId: string, role: string): Promise<ApiResponse> {
+    const response: AxiosResponse<ApiResponse> = await this.api.put(`/admin/users/${userId}/role`, { role });
+    return response.data;
+  }
+
+  async updateUserStatus(userId: string, status: string): Promise<ApiResponse> {
+    const response: AxiosResponse<ApiResponse> = await this.api.put(`/admin/users/${userId}/status`, { status });
+    return response.data;
+  }
+
+  // Admin - User-Host Account Mapping
+  async getUserHostAccounts(): Promise<ApiResponse<{ accounts: any[] }>> {
+    const response: AxiosResponse<ApiResponse<any>> = await this.api.get('/admin/user-host-accounts');
+    return response.data;
+  }
+
+  async createUserHostAccount(userId: string, hostId: string, remoteUsername: string, status?: string): Promise<ApiResponse<{ account: any }>> {
+    const response: AxiosResponse<ApiResponse<any>> = await this.api.post('/admin/user-host-accounts', {
+      user_id: userId,
+      host_id: hostId,
+      remote_username: remoteUsername,
+      status: status || 'active',
+    });
+    return response.data;
+  }
+
+  // Legacy endpoint for backward compatibility
   async applyAuthorizedKeys(username: string): Promise<ApiResponse<{ applied: any[]; checksum: string }>> {
-    const response: AxiosResponse<ApiResponse<{ applied: any[]; checksum: string }>> = await this.api.post(`/admin/apply`, null, {
+    const response: AxiosResponse<ApiResponse<{ applied: any[]; checksum: string }>> = await this.api.post(`/admin/apply-legacy`, null, {
       params: { username },
     });
     return response.data;

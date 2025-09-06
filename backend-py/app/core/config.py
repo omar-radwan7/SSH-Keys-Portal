@@ -10,9 +10,10 @@ class Settings(BaseSettings):
 	DB_HOST: str = Field(default="localhost")
 	DB_PORT: int = Field(default=5432)
 	DB_NAME: str = Field(default="hpc_ssh_portal")
-	DB_USER: str = Field(default="username")
+	DB_USER: str = Field(default="postgres")
 	DB_PASSWORD: str = Field(default="password")
 	DATABASE_URL: str | None = Field(default=None)
+	USE_SQLITE: bool = Field(default=True)  # Set to False for production PostgreSQL
 
 	JWT_SECRET: str = Field(default="change-me")
 	JWT_EXPIRES_HOURS: int = Field(default=24)
@@ -20,6 +21,9 @@ class Settings(BaseSettings):
 	LDAP_URL: str = Field(default="ldap://localhost:389")
 	LDAP_BASE_DN: str = Field(default="dc=example,dc=com")
 	LDAP_USER_FILTER: str = Field(default="(cn={username})")
+	LDAP_GROUP_FILTER: str = Field(default="(member={user_dn})")
+	LDAP_ADMIN_GROUPS: str = Field(default="cn=ssh-admins,ou=groups,dc=example,dc=com")
+	LDAP_AUDITOR_GROUPS: str = Field(default="cn=ssh-auditors,ou=groups,dc=example,dc=com")
 
 	SYSGEN_ENCRYPTION_KEY: str = Field(default="change-this-key")
 	SYSGEN_DOWNLOAD_TTL_MIN: int = Field(default=10)
