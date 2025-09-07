@@ -10,6 +10,8 @@ from ..utils.auth import hash_password, verify_password, validate_password_stren
 import json
 from ..core.deps import get_current_user
 from datetime import datetime, timedelta
+from ..schemas import ChangeUsernameRequest, ChangePasswordRequest
+from ..schemas import ChangeEmailRequest
 
 router = APIRouter()
 
@@ -132,8 +134,8 @@ async def login(
 		if user and user.password_hash:
 			# Verify password for local account
 			if verify_password(login_data.password, user.password_hash):
-				# Check if account is active
-				if user.status != 'active':
+				# Check if account is disabled (only 'disabled' accounts cannot login)
+				if user.status == 'disabled':
 					raise HTTPException(
 						status_code=401,
 						detail="Account is disabled"
@@ -298,8 +300,6 @@ async def login(
 async def logout(request: Request):
 	return ApiResponse(success=True, message="Logged out successfully")
 
-from ..schemas import ChangeUsernameRequest, ChangePasswordRequest
-
 @router.put("/change-username", response_model=ApiResponse)
 async def change_username(
 	payload: ChangeUsernameRequest,
@@ -373,6 +373,35 @@ async def change_password(
 		source_ip=get_client_ip(request), user_agent=request.headers.get("user-agent", "")
 	)
 	return ApiResponse(success=True, message="Password updated successfully")
+
+@router.put("/change-email", response_model=ApiResponse)
+async def change_email(
+	payload: ChangeEmailRequest,
+	request: Request,
+	db: Session = Depends(get_db)
+):
+	"""Allow the current user to change their email (local accounts only)."""
+	user = get_current_user(request.headers.get("authorization"), db)
+	if not user.is_local_account:
+		raise HTTPException(status_code=400, detail="Email change is only available for local accounts")
+	if not user.password_hash or not verify_password(payload.currentPassword, user.password_hash):
+		raise HTTPException(status_code=401, detail="Current password is incorrect")
+	# Check email uniqueness
+	if payload.newEmail:
+		existing_email = db.query(User).filter(User.email == payload.newEmail).first()
+		if existing_email and existing_email.id != user.id:
+			raise HTTPException(status_code=400, detail="Email address already registered")
+	old_email = user.email
+	user.email = payload.newEmail
+	db.commit()
+	# Audit
+	log_audit(
+		db, actor_user_id=user.id, action="email_changed",
+		entity="user", entity_id=user.id,
+		metadata={"old_email": old_email, "new_email": user.email},
+		source_ip=get_client_ip(request), user_agent=request.headers.get("user-agent", "")
+	)
+	return ApiResponse(success=True, message="Email updated successfully")
 
 @router.post("/register", response_model=ApiResponse)
 async def register_user(

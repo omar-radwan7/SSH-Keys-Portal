@@ -3,6 +3,8 @@ import { useForm } from 'react-hook-form';
 import { useAuth } from '../context/AuthContext';
 import { Lock, User, AlertCircle, Shield, Users, Key, Mail, UserPlus, Eye, EyeOff } from 'lucide-react';
 import apiService from '../services/api';
+import i18n from '../services/i18n';
+import LanguageSelector from './LanguageSelector';
 
 interface LoginForm {
   username: string;
@@ -100,10 +102,13 @@ const Login: React.FC = () => {
           <div className="mx-auto h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center mb-4">
             <Key className="h-8 w-8 text-white" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">HPC SSH Key Portal</h2>
+          <div className="flex items-center justify-center gap-3">
+            <h2 className="text-3xl font-bold text-gray-900">HPC SSH Key Portal</h2>
+            <LanguageSelector />
+          </div>
           <p className="mt-2 text-sm text-gray-600">
-            {mode === 'login' ? 'Sign in to your account' : 
-             mode === 'register' ? 'Create your account' : 'Admin Sign In'}
+            {mode === 'login' ? i18n.t('auth.signIn') : 
+             mode === 'register' ? i18n.t('auth.register') : i18n.t('auth.adminLogin')}
           </p>
             </div>
 
@@ -120,7 +125,7 @@ const Login: React.FC = () => {
               }`}
             >
               <Users className="w-3 h-3 inline mr-1" />
-              User Login
+              {i18n.t('auth.userLogin')}
             </button>
             <button
               type="button"
@@ -132,7 +137,7 @@ const Login: React.FC = () => {
               }`}
             >
               <UserPlus className="w-3 h-3 inline mr-1" />
-              Register
+              {i18n.t('auth.register')}
             </button>
             <button
               type="button"
@@ -144,7 +149,7 @@ const Login: React.FC = () => {
               }`}
             >
               <Shield className="w-3 h-3 inline mr-1" />
-              Admin Login
+              {i18n.t('auth.adminLogin')}
             </button>
           </div>
 
@@ -160,16 +165,16 @@ const Login: React.FC = () => {
             <form onSubmit={handleLoginSubmit(onLoginSubmit)} className="space-y-6">
             <div>
                 <label htmlFor="login-username" className="block text-sm font-medium text-gray-700 mb-2">
-                Username
+                {i18n.t('auth.username')}
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
-                    {...loginRegister('username', { required: 'Username is required' })}
+                    {...loginRegister('username', { required: i18n.t('a11y.required') })}
                   type="text"
                     id="login-username"
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter your username"
+                  placeholder={i18n.t('auth.username')}
                   disabled={isLoading}
                 />
               </div>
@@ -177,23 +182,23 @@ const Login: React.FC = () => {
                   <p className="mt-1 text-sm text-red-600">
                     {typeof loginErrors.username.message === 'string' 
                       ? loginErrors.username.message 
-                      : 'Username is required'}
+                      : i18n.t('a11y.required')}
                   </p>
               )}
             </div>
 
             <div>
                 <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password
+                {i18n.t('auth.password')}
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
-                    {...loginRegister('password', { required: 'Password is required' })}
+                    {...loginRegister('password', { required: i18n.t('a11y.required') })}
                     type={showPassword ? 'text' : 'password'}
                     id="login-password"
                     className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter your password"
+                  placeholder={i18n.t('auth.password')}
                   disabled={isLoading}
                 />
                   <button
@@ -208,7 +213,7 @@ const Login: React.FC = () => {
                   <p className="mt-1 text-sm text-red-600">
                     {typeof loginErrors.password.message === 'string' 
                       ? loginErrors.password.message 
-                      : 'Password is required'}
+                      : i18n.t('a11y.required')}
                   </p>
               )}
             </div>
@@ -225,12 +230,12 @@ const Login: React.FC = () => {
               {isLoading ? (
                 <>
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>Signing in...</span>
+                  <span>{i18n.t('auth.signIn')}</span>
                 </>
               ) : (
                   <>
                     {mode === 'admin-login' ? <Shield className="w-5 h-5" /> : <Key className="w-5 h-5" />}
-                    <span>{mode === 'admin-login' ? 'Admin Sign In' : 'Sign In'}</span>
+                    <span>{mode === 'admin-login' ? i18n.t('auth.adminLogin') : i18n.t('auth.signIn')}</span>
                   </>
                 )}
               </button>

@@ -5,22 +5,51 @@ import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import Admin from './components/Admin';
 import './App.css';
+import i18n from './services/i18n';
+import { useEffect, useState } from 'react';
 
 type ChildrenProps = { children: React.ReactNode };
 
 const ProtectedRoute: React.FC<ChildrenProps> = ({ children }: ChildrenProps) => {
   const { state } = useAuth();
-  return state.isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+  // Allow access if context is authenticated
+  if (state.isAuthenticated) return <>{children}</>;
+  // Fallback: hydrate from localStorage to avoid redirect flicker on refresh
+  try {
+    const token = localStorage.getItem('auth_token');
+    const userStr = localStorage.getItem('user');
+    if (token && userStr) {
+      return <>{children}</>;
+    }
+  } catch {}
+  return <Navigate to="/login" replace />;
 };
 
 const PublicRoute: React.FC<ChildrenProps> = ({ children }: ChildrenProps) => {
   const { state } = useAuth();
-  return !state.isAuthenticated ? <>{children}</> : <Navigate to="/dashboard" replace />;
+  if (!state.isAuthenticated) {
+    return <>{children}</>;
+  }
+  // Redirect based on user role
+  const redirectTo = state.user?.role === 'admin' ? '/admin' : '/dashboard';
+  return <Navigate to={redirectTo} replace />;
 };
 
 const AdminRoute: React.FC<ChildrenProps> = ({ children }: ChildrenProps) => {
   const { state } = useAuth();
-  return state.isAuthenticated && (state.user?.role === 'admin') ? <>{children}</> : <Navigate to="/dashboard" replace />;
+  // Allow immediately if context shows authenticated admin
+  if (state.isAuthenticated && state.user?.role === 'admin') return <>{children}</>;
+  // Fallback: check persisted session to avoid redirect on refresh
+  try {
+    const token = localStorage.getItem('auth_token');
+    const userStr = localStorage.getItem('user');
+    if (token && userStr) {
+      const user = JSON.parse(userStr);
+      if (user?.role === 'admin') return <>{children}</>;
+    }
+  } catch {}
+  // Not admin → send to dashboard (will get kicked to login there if unauthenticated)
+  return <Navigate to="/dashboard" replace />;
 };
 
 const AppRoutes: React.FC = () => {
@@ -50,13 +79,19 @@ const AppRoutes: React.FC = () => {
           </AdminRoute>
         }
       />
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 };
 
 const App: React.FC = () => {
+  const [langVersion, setLangVersion] = useState(0);
+  useEffect(() => {
+    const handler = () => setLangVersion(v => v + 1);
+    i18n.addLanguageChangeListener(handler);
+    return () => i18n.removeLanguageChangeListener(handler);
+  }, []);
   return (
     <AuthProvider>
       <Router>

@@ -27,9 +27,16 @@ class ApiService {
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user');
-          window.location.href = '/login';
+          const url = error.config?.url || '';
+          const isAdminApi = url.includes('/admin/');
+          // Auto-logout on 401 for non-admin APIs (kicks deleted/expired user sessions immediately)
+          if (!isAdminApi) {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+            return Promise.reject(error);
+          }
+          // For admin APIs, do not auto-logout; allow UI to handle gracefully
         }
         return Promise.reject(error);
       }
@@ -38,14 +45,30 @@ class ApiService {
 
   // Authentication
   async login(username: string, password: string): Promise<ApiResponse<{ token: string; user: User }>> {
-    const allowTest = process.env.NODE_ENV !== 'production';
-    const path = allowTest ? '/auth/test-login' : '/auth/login';
-
-    const response: AxiosResponse<ApiResponse<{ token: string; user: User }>> = await this.api.post(path, {
-      username,
-      password,
-    });
-    return response.data;
+    // Try regular login first for real user accounts
+    try {
+      const response: AxiosResponse<ApiResponse<{ token: string; user: User }>> = await this.api.post('/auth/login', {
+        username,
+        password,
+      });
+      return response.data;
+    } catch (error: any) {
+      // If regular login fails and it's admin/admin, try test-login as fallback
+      if (username === 'admin' && password === 'admin') {
+        try {
+          const testResponse: AxiosResponse<ApiResponse<{ token: string; user: User }>> = await this.api.post('/auth/test-login', {
+            username,
+            password,
+          });
+          return testResponse.data;
+        } catch (testError) {
+          // If both fail, return the original error
+          throw error;
+        }
+      }
+      // For all other cases, throw the original error
+      throw error;
+    }
   }
 
   async logout(): Promise<ApiResponse> {
@@ -80,6 +103,14 @@ class ApiService {
     const response: AxiosResponse<ApiResponse> = await this.api.put('/auth/change-password', {
       currentPassword,
       newPassword,
+    });
+    return response.data;
+  }
+
+  async updateMyEmail(currentPassword: string, newEmail: string): Promise<ApiResponse> {
+    const response: AxiosResponse<ApiResponse> = await this.api.put('/auth/change-email', {
+      currentPassword,
+      newEmail,
     });
     return response.data;
   }
@@ -261,6 +292,11 @@ class ApiService {
 
   async updateUserStatus(userId: string, status: string): Promise<ApiResponse> {
     const response: AxiosResponse<ApiResponse> = await this.api.put(`/admin/users/${userId}/status`, { status });
+    return response.data;
+  }
+
+  async adminDeleteUser(userId: string): Promise<ApiResponse> {
+    const response: AxiosResponse<ApiResponse> = await this.api.delete(`/admin/users/${userId}`);
     return response.data;
   }
 

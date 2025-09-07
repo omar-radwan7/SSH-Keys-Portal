@@ -14,6 +14,7 @@ import csv
 import json
 import io
 from ..utils.auth import validate_username, validate_password_strength, hash_password
+from sqlalchemy import func
 
 router = APIRouter()
 
@@ -25,7 +26,8 @@ async def create_host(payload: ManagedHostCreate, request: Request, db: Session 
 	# Prevent duplicate hostname (unique constraint)
 	exists = db.query(ManagedHost).filter(ManagedHost.hostname == payload.hostname).first()
 	if exists:
-		raise HTTPException(status_code=409, detail="Hostname already exists")
+		# Make this operation idempotent: return the existing host as success
+		return ApiResponse(success=True, data={"host": ManagedHostOut.model_validate(exists).model_dump()}, message="Host already existed; returning existing record")
 	host = ManagedHost(hostname=payload.hostname, address=payload.address, os_family=payload.os_family)
 	db.add(host); db.commit(); db.refresh(host)
 	return ApiResponse(success=True, data={"host": ManagedHostOut.model_validate(host).model_dump()})
@@ -413,47 +415,22 @@ async def get_admin_metrics(request: Request, db: Session = Depends(get_db)):
 	user = get_current_user_from_auth(request, db)
 	if user.role != 'admin':
 		raise HTTPException(status_code=403, detail="Admin access required")
-	
-	# Count active keys by status
-	key_stats = db.query(SSHKey.status, db.func.count(SSHKey.id)).group_by(SSHKey.status).all()
-	key_counts = {status: count for status, count in key_stats}
-	
-	# Count users by role
-	user_stats = db.query(User.role, db.func.count(User.id)).group_by(User.role).all()
-	user_counts = {role: count for role, count in user_stats}
-	
-	# Count hosts
+	# Aggregate counts safely
 	host_count = db.query(ManagedHost).count()
-	
-	# Count pending deployments
-	pending_deployments = db.query(Deployment).filter(Deployment.status == 'pending').count()
-	
-	# Keys expiring in next 30 days
-	expiring_soon = db.query(SSHKey).filter(
-		SSHKey.status == 'active',
-		SSHKey.expires_at.isnot(None),
-		SSHKey.expires_at <= datetime.utcnow() + timedelta(days=30),
-		SSHKey.expires_at > datetime.utcnow()
-	).count()
-	
-	# Recent failed deployments (last 24h)
-	failed_deployments = db.query(Deployment).filter(
-		Deployment.status == 'failed',
-		Deployment.finished_at >= datetime.utcnow() - timedelta(hours=24)
-	).count()
-	
-	return ApiResponse(
-		success=True,
-		data={
-			"key_counts": key_counts,
-			"user_counts": user_counts,
-			"host_count": host_count,
-			"pending_deployments": pending_deployments,
-			"keys_expiring_soon": expiring_soon,
-			"failed_deployments_24h": failed_deployments,
-			"generated_at": datetime.utcnow().isoformat()
-		}
-	)
+	user_count = db.query(User).count()
+	# Key metrics guarded if table exists
+	try:
+		key_totals = db.query(func.count(SSHKey.id)).scalar() or 0
+		key_active = db.query(func.count(SSHKey.id)).filter(SSHKey.status == 'active').scalar() or 0
+	except Exception:
+		key_totals = 0
+		key_active = 0
+	return ApiResponse(success=True, data={
+		"total_hosts": host_count,
+		"total_users": user_count,
+		"total_keys": key_totals,
+		"active_keys": key_active
+	})
 
 @router.get("/deployments", response_model=ApiResponse)
 async def list_deployments(
@@ -511,6 +488,13 @@ async def list_users(request: Request, db: Session = Depends(get_db)):
 	
 	user_data = []
 	for u in users:
+		# Calculate usage-based status
+		calculated_status = calculate_user_status(u)
+		# Update status if it has changed
+		if u.status != calculated_status and calculated_status in ['active', 'inactive']:
+			u.status = calculated_status
+			db.commit()
+		
 		user_dict = {
 			"id": u.id,
 			"username": u.username,
@@ -518,6 +502,8 @@ async def list_users(request: Request, db: Session = Depends(get_db)):
 			"email": u.email,
 			"role": u.role,
 			"status": u.status,
+			"last_login_at": u.last_login_at.isoformat() if u.last_login_at else None,
+			"days_since_login": (datetime.utcnow() - u.last_login_at).days if u.last_login_at else None,
 			"created_at": u.created_at.isoformat(),
 			"key_count": len([k for k in u.ssh_keys if k.status == 'active'])
 		}
@@ -526,45 +512,12 @@ async def list_users(request: Request, db: Session = Depends(get_db)):
 	return ApiResponse(success=True, data={"users": user_data})
 
 @router.put("/users/{user_id}/role", response_model=ApiResponse)
-async def update_user_role(
-	user_id: str, 
-	role_data: dict, 
-	request: Request, 
-	db: Session = Depends(get_db)
-):
-	"""Update a user's role"""
-	admin_user = get_current_user_from_auth(request, db)
-	if admin_user.role != 'admin':
+async def update_user_role(user_id: str, payload: dict, request: Request, db: Session = Depends(get_db)):
+	current_user = get_current_user_from_auth(request, db)
+	if current_user.role != 'admin':
 		raise HTTPException(status_code=403, detail="Admin access required")
-	
-	target_user = db.query(User).filter(User.id == user_id).first()
-	if not target_user:
-		raise HTTPException(status_code=404, detail="User not found")
-	
-	new_role = role_data.get('role')
-	if new_role not in ['user', 'admin', 'auditor']:
-		raise HTTPException(status_code=400, detail="Invalid role")
-	
-	old_role = target_user.role
-	target_user.role = new_role
-	db.commit()
-	
-	log_audit(
-		db, actor_user_id=admin_user.id, action="user_role_updated",
-		entity="user", entity_id=target_user.id,
-		metadata={
-			"old_role": old_role,
-			"new_role": new_role,
-			"target_username": target_user.username
-		},
-		source_ip=request.client.host if request.client else "0.0.0.0",
-		user_agent=request.headers.get("user-agent", "")
-	)
-	
-	return ApiResponse(
-		success=True, 
-		message=f"Updated {target_user.username} role from {old_role} to {new_role}"
-	)
+	# Disallow role changes per product decision
+	raise HTTPException(status_code=403, detail="Changing user roles is disabled")
 
 @router.put("/users/{user_id}/status", response_model=ApiResponse)
 async def update_user_status(
@@ -582,8 +535,12 @@ async def update_user_status(
 	if not target_user:
 		raise HTTPException(status_code=404, detail="User not found")
 	
+	# Prevent admins from modifying other admins
+	if target_user.role == 'admin' and target_user.id != admin_user.id:
+		raise HTTPException(status_code=403, detail="Cannot modify other admin accounts")
+	
 	new_status = status_data.get('status')
-	if new_status not in ['active', 'disabled']:
+	if new_status not in ['active', 'inactive', 'new']:
 		raise HTTPException(status_code=400, detail="Invalid status")
 	
 	old_status = target_user.status
@@ -631,6 +588,10 @@ async def admin_update_username(
 	if not user:
 		raise HTTPException(status_code=404, detail="User not found")
 
+	# Prevent admins from modifying other admins
+	if user.role == 'admin' and user.id != admin_user.id:
+		raise HTTPException(status_code=403, detail="Cannot modify other admin accounts")
+
 	existing = db.query(User).filter(User.username == new_username).first()
 	if existing and existing.id != user.id:
 		raise HTTPException(status_code=400, detail="Username already exists")
@@ -675,6 +636,10 @@ async def admin_reset_password(
 	if not user.is_local_account:
 		raise HTTPException(status_code=400, detail="Cannot reset password for non-local accounts")
 
+	# Prevent admins from modifying other admins
+	if user.role == 'admin' and user.id != admin_user.id:
+		raise HTTPException(status_code=403, detail="Cannot modify other admin accounts")
+
 	user.password_hash = hash_password(new_password)
 	db.commit()
 
@@ -687,6 +652,22 @@ async def admin_reset_password(
 	)
 
 	return ApiResponse(success=True, message="Password reset successfully")
+
+def calculate_user_status(user):
+	"""Calculate real-time-like status:
+	- active: last_activity_at within 10 minutes
+	- new: never logged in
+	- inactive: otherwise
+	"""
+	from datetime import datetime, timedelta
+	if user.last_activity_at:
+		if datetime.utcnow() - user.last_activity_at <= timedelta(minutes=10):
+			return 'active'
+	# Never logged in
+	if not user.last_login_at:
+		return 'new'
+	# Logged in before but not recently active
+	return 'inactive'
 
 @router.get("/security/alerts", response_model=ApiResponse)
 async def get_security_alerts(
@@ -831,6 +812,7 @@ async def create_admin_account(
 			display_name=display_name,
 			password_hash=password_hash,
 			role='admin',  # Create as admin
+			status='new',  # New admin starts as 'new' until first login
 			is_local_account=True,
 			external_id=None
 		)
@@ -934,6 +916,7 @@ async def create_user_account(
 			display_name=display_name,
 			password_hash=password_hash,
 			role='user',  # Create as user
+			status='new',  # New user starts as 'new' until first login
 			is_local_account=True,
 			external_id=None
 		)
@@ -978,3 +961,30 @@ async def create_user_account(
 			source_ip=source_ip, user_agent=request.headers.get("user-agent", "")
 		)
 		raise HTTPException(status_code=500, detail="Failed to create user account") 
+
+@router.delete("/users/{user_id}", response_model=ApiResponse)
+async def delete_user(user_id: str, request: Request, db: Session = Depends(get_db)):
+	current_user = get_current_user_from_auth(request, db)
+	if current_user.role != 'admin':
+		raise HTTPException(status_code=403, detail="Admin access required")
+	# Prevent deleting admins (including self or others)
+	target = db.query(User).filter(User.id == user_id).first()
+	if not target:
+		raise HTTPException(status_code=404, detail="User not found")
+	if target.role == 'admin':
+		raise HTTPException(status_code=403, detail="Cannot delete admin accounts")
+	# Delete related mappings (FKs) first if any
+	for acc in db.query(UserHostAccount).filter(UserHostAccount.user_id == user_id).all():
+		db.delete(acc)
+	# Finally delete user
+	db.delete(target)
+	db.commit()
+	# Audit
+	log_audit(
+		db, actor_user_id=current_user.id, action="user_deleted",
+		entity="user", entity_id=user_id,
+		metadata={"deleted_username": target.username},
+		source_ip=request.client.host if request.client else "0.0.0.0",
+		user_agent=request.headers.get("user-agent", "")
+	)
+	return ApiResponse(success=True, message="User deleted successfully") 

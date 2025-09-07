@@ -40,20 +40,22 @@ async def get_my_keys(
 	
 	return ApiResponse(
 		success=True,
-		data=[{
-			"id": key.id,
-			"user_id": key.user_id,
-			"public_key": key.public_key,
-			"algorithm": key.algorithm,
-			"bit_length": key.bit_length,
-			"comment": key.comment,
-			"fingerprint_sha256": key.fingerprint_sha256,
-			"origin": key.origin,
-			"expires_at": key.expires_at.isoformat() if key.expires_at else None,
-			"status": key.status,
-			"authorized_keys_options": key.authorized_keys_options,
-			"created_at": key.created_at.isoformat()
-		} for key in keys]
+		data={
+			"keys": [{
+				"id": key.id,
+				"user_id": key.user_id,
+				"public_key": key.public_key,
+				"algorithm": key.algorithm,
+				"bit_length": key.bit_length,
+				"comment": key.comment,
+				"fingerprint_sha256": key.fingerprint_sha256,
+				"origin": key.origin,
+				"expires_at": key.expires_at.isoformat() if key.expires_at else None,
+				"status": key.status,
+				"authorized_keys_options": key.authorized_keys_options,
+				"created_at": key.created_at.isoformat()
+			} for key in keys]
+		}
 	)
 
 @router.post("/preview", response_model=ApiResponse)

@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import apiService from '../services/api';
 import { X, Upload, Eye, Check, AlertCircle } from 'lucide-react';
 import { KeyPreview } from '../types';
+import i18n from '../services/i18n';
 
 interface ImportKeyForm {
   publicKey: string;
@@ -86,7 +87,7 @@ const ImportKeyModal: React.FC<Props> = ({ onClose, onSuccess }: Props) => {
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900 flex items-center space-x-2">
             <Upload className="w-6 h-6 text-blue-600" />
-            <span>Import SSH Key</span>
+            <span>{i18n.t('modal.importKey')}</span>
           </h2>
           <button
             onClick={onClose}
@@ -109,7 +110,7 @@ const ImportKeyModal: React.FC<Props> = ({ onClose, onSuccess }: Props) => {
             {/* Public Key Input */}
             <div>
               <label htmlFor="publicKey" className="block text-sm font-medium text-gray-700 mb-2">
-                SSH Public Key *
+                {i18n.t('form.publicKey')} *
               </label>
               <div className="relative">
                 <textarea
@@ -165,7 +166,7 @@ const ImportKeyModal: React.FC<Props> = ({ onClose, onSuccess }: Props) => {
             {/* Comment */}
             <div>
               <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-2">
-                Comment (optional)
+                {i18n.t('form.comment')} (optional)
               </label>
               <input
                 {...register('comment')}
@@ -222,12 +223,12 @@ const ImportKeyModal: React.FC<Props> = ({ onClose, onSuccess }: Props) => {
                 {isLoading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Importing...</span>
+                    <span>{i18n.t('form.importing')}</span>
                   </>
                 ) : (
                   <>
                     <Upload className="w-4 h-4" />
-                    <span>Import Key</span>
+                    <span>{i18n.t('form.import')}</span>
                   </>
                 )}
               </button>

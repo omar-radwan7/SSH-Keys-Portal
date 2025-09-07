@@ -30,8 +30,15 @@ def get_current_user(token: str, db: Session) -> User:
 	try:
 		data = jwt.decode(token, settings.JWT_SECRET, algorithms=[ALGORITHM])
 		user = db.query(User).filter(User.id == data.get("id")).first()
-		if not user or user.status != 'active':
+		if not user:
 			raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+		# Only block 'disabled' users - allow 'new', 'active', and 'inactive' users
+		# 'inactive' just means they haven't been active recently, not that they're blocked
+		if user.status == 'disabled':
+			raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account is disabled")
+		# Update last activity timestamp for real-time status
+		user.last_activity_at = datetime.utcnow()
+		db.commit()
 		return user
 	except jwt.PyJWTError:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token") 

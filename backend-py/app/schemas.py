@@ -153,3 +153,7 @@ class ChangeUsernameRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
 	currentPassword: constr(min_length=1)
 	newPassword: constr(min_length=8, max_length=128) 
+
+class ChangeEmailRequest(BaseModel):
+	newEmail: EmailStr
+	currentPassword: constr(min_length=1) 

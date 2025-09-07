@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import apiService from '../services/api';
+import i18n from '../services/i18n';
 import { X, Download, AlertCircle, Shield, Copy, Key } from 'lucide-react';
 
 interface ClientGenerateKeyForm {
@@ -25,6 +26,20 @@ const ClientGenerateKeyModal: React.FC<Props> = ({ onClose, onSuccess }: Props) 
     privateKey: string;
     fingerprint: string;
   } | null>(null);
+  const [renderKey, setRenderKey] = useState(0);
+
+  // Listen for language changes and force re-render
+  useEffect(() => {
+    const handleLanguageChange = (language: any, direction: any) => {
+      setRenderKey(prev => prev + 1);
+    };
+
+    i18n.addLanguageChangeListener(handleLanguageChange);
+    
+    return () => {
+      i18n.removeLanguageChangeListener(handleLanguageChange);
+    };
+  }, []);
 
   const {
     register,
@@ -335,7 +350,7 @@ const ClientGenerateKeyModal: React.FC<Props> = ({ onClose, onSuccess }: Props) 
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900 flex items-center space-x-2">
             <Key className="w-6 h-6 text-blue-600" />
-            <span>Generate SSH Key (Client-Side)</span>
+            <span>{i18n.t('modal.generateClientKey')}</span>
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100">
             <X className="w-6 h-6" />
@@ -353,7 +368,7 @@ const ClientGenerateKeyModal: React.FC<Props> = ({ onClose, onSuccess }: Props) 
           <form onSubmit={handleSubmit(onGenerate)} className="space-y-6">
             <div>
               <label htmlFor="algorithm" className="block text-sm font-medium text-gray-700 mb-2">
-                Algorithm *
+                {i18n.t('form.algorithm')} *
               </label>
               <select
                 {...register('algorithm', { required: 'Algorithm is required' })}
@@ -375,7 +390,7 @@ const ClientGenerateKeyModal: React.FC<Props> = ({ onClose, onSuccess }: Props) 
 
             <div>
               <label htmlFor="bitLength" className="block text-sm font-medium text-gray-700 mb-2">
-                Key Length *
+                {i18n.t('form.keyLength')} *
               </label>
               <select
                 {...register('bitLength', { required: 'Key length is required', valueAsNumber: true })}
@@ -399,10 +414,9 @@ const ClientGenerateKeyModal: React.FC<Props> = ({ onClose, onSuccess }: Props) 
               <div className="flex items-start space-x-3">
                 <Shield className="w-5 h-5 text-blue-600 mt-0.5" />
                 <div>
-                  <h3 className="text-sm font-medium text-blue-800 mb-1">Client-Side Generation</h3>
+                  <h3 className="text-sm font-medium text-blue-800 mb-1">{i18n.t('modal.clientSideGeneration')}</h3>
                   <p className="text-sm text-blue-700">
-                    Keys are generated in your browser using Web Crypto API. 
-                    The private key never leaves your device and is not sent to the server.
+                    {i18n.t('modal.clientSideGenerationDesc')}
                   </p>
                 </div>
               </div>

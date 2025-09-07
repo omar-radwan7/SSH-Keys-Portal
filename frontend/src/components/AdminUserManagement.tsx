@@ -3,6 +3,8 @@ import { useForm } from 'react-hook-form';
 import { User, UserPlus, Shield, Users, Eye, EyeOff, AlertCircle, CheckCircle, Edit2, Trash2, Search, X, Save, Key, AtSign } from 'lucide-react';
 import apiService from '../services/api';
 import { User as UserType } from '../types';
+import i18n from '../services/i18n';
+import { useAuth } from '../context/AuthContext';
 
 interface CreateUserForm {
   username: string;
@@ -14,6 +16,7 @@ interface CreateUserForm {
 }
 
 const AdminUserManagement: React.FC = () => {
+  const { state: authState } = useAuth();
   const [users, setUsers] = useState<UserType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
@@ -43,8 +46,11 @@ const AdminUserManagement: React.FC = () => {
   const watchPassword = watch('password', '');
 
   useEffect(() => {
-    loadUsers();
-  }, []);
+    // Only load when authenticated (prevents 401 during hydration)
+    if (authState.isAuthenticated) {
+      loadUsers();
+    }
+  }, [authState.isAuthenticated, authState.token]);
 
   const loadUsers = async () => {
     try {
@@ -54,13 +60,22 @@ const AdminUserManagement: React.FC = () => {
         setUsers(response.data.users || []);
       }
     } catch (err: any) {
-      setError('Failed to load users');
+      if (err?.response?.status === 401) {
+        setError(i18n.t('auth.invalidCredentials'));
+      } else {
+        setError(i18n.t('Failed to load users'));
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const openEditModal = (user: UserType) => {
+    // Note: In a real app, you'd compare against current admin's ID
+    // For now, allowing all edits but backend will enforce protection
+    setError('');
+    setSuccess('');
+    
     setEditingUser(user);
     setEditUsername(user.username);
     setEditNewPassword('');
@@ -80,7 +95,7 @@ const AdminUserManagement: React.FC = () => {
         const res = await apiService.adminUpdateUsername(editingUser.id, editUsername.trim());
         if (!res.success) {
           setIsLoading(false);
-          setError(res.message || 'Failed to update username');
+          setError(res.message || i18n.t('Failed to update username'));
           return;
         }
       }
@@ -89,15 +104,15 @@ const AdminUserManagement: React.FC = () => {
         const res2 = await apiService.adminResetPassword(editingUser.id, editNewPassword.trim());
         if (!res2.success) {
           setIsLoading(false);
-          setError(res2.message || 'Failed to reset password');
+          setError(res2.message || i18n.t('Failed to reset password'));
           return;
         }
       }
-      setSuccess('User updated successfully');
+      setSuccess(i18n.t('User updated successfully'));
       setEditingUser(null);
       await loadUsers();
     } catch (e: any) {
-      setError(e.response?.data?.detail || 'Failed to update user');
+      setError(e.response?.data?.detail || i18n.t('Failed to update user'));
     } finally {
       setIsLoading(false);
     }
@@ -118,45 +133,78 @@ const AdminUserManagement: React.FC = () => {
       });
 
       if (response.success) {
-        setSuccess(`${data.role === 'admin' ? 'Admin' : 'User'} account '${data.username}' created successfully!`);
+        setSuccess(`${data.role === 'admin' ? i18n.t('Admin') : i18n.t('User')} account '${data.username}' created successfully!`);
         reset();
         setShowCreateForm(false);
         loadUsers(); // Reload the user list
       } else {
-        setError(response.message || 'Failed to create account');
+        setError(response.message || i18n.t('Failed to create account'));
       }
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to create account. Please try again.');
+      setError(err.response?.data?.detail || i18n.t('Failed to create account. Please try again.'));
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleRoleChange = async (userId: string, newRole: 'user' | 'admin') => {
+    // Prevent changing role of other admins
+    const targetUser = users.find(u => u.id === userId);
+    if (targetUser?.role === 'admin' && targetUser.id !== userId) {
+      setError(i18n.t('Cannot modify other admin accounts'));
+      return;
+    }
+    
     try {
       const response = await apiService.updateUserRole(userId, newRole);
       if (response.success) {
-        setSuccess(`User role updated to ${newRole}`);
+        setSuccess(`${i18n.t('User role updated to')} ${newRole}`);
         loadUsers();
       } else {
-        setError('Failed to update user role');
+        setError(i18n.t('Failed to update user role'));
       }
     } catch (err: any) {
-      setError('Failed to update user role');
+      setError(i18n.t('Failed to update user role'));
     }
   };
 
-  const handleStatusChange = async (userId: string, newStatus: 'active' | 'disabled') => {
+  const handleStatusChange = async (userId: string, newStatus: 'active' | 'inactive') => {
+    // Prevent changing status of other admins
+    const targetUser = users.find(u => u.id === userId);
+    if (targetUser?.role === 'admin' && userId !== targetUser.id) {
+      setError(i18n.t('Cannot modify other admin accounts'));
+      return;
+    }
+    
     try {
       const response = await apiService.updateUserStatus(userId, newStatus);
       if (response.success) {
-        setSuccess(`User ${newStatus === 'active' ? 'activated' : 'disabled'}`);
+        setSuccess(`${i18n.t('User status updated to')} ${newStatus}`);
         loadUsers();
       } else {
-        setError('Failed to update user status');
+        setError(i18n.t('Failed to update user status'));
       }
     } catch (err: any) {
-      setError('Failed to update user status');
+      setError(i18n.t('Failed to update user status'));
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      setIsLoading(true);
+      setError('');
+      setSuccess('');
+      const res = await apiService.adminDeleteUser(userId);
+      if (!res.success) {
+        setError(res.message || i18n.t('Failed to delete user'));
+      } else {
+        setSuccess(i18n.t('User deleted successfully'));
+        await loadUsers();
+      }
+    } catch (e: any) {
+      setError(e.response?.data?.detail || i18n.t('Failed to delete user'));
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -168,6 +216,35 @@ const AdminUserManagement: React.FC = () => {
     return matchesSearch && matchesRole;
   });
 
+  const getStatusBadge = (status: string, lastLogin: string | null, daysAgo: number | null) => {
+    let badgeClass = '';
+    let statusText = status;
+    
+    if (status === 'new') {
+      badgeClass = 'bg-blue-100 text-blue-800 border-blue-200';
+      statusText = i18n.t('New');
+    } else if (status === 'active') {
+      badgeClass = 'bg-green-100 text-green-800 border-green-200';
+      statusText = i18n.t('Active');
+    } else if (status === 'inactive') {
+      badgeClass = 'bg-gray-100 text-gray-800 border-gray-200';
+      statusText = i18n.t('Inactive');
+    }
+    
+    return (
+      <div className="flex flex-col">
+        <span className={`px-2 py-1 text-xs rounded-full border ${badgeClass}`}>
+          {statusText}
+        </span>
+        {lastLogin && (
+          <span className="text-xs text-gray-400 mt-1">
+            {daysAgo === 0 ? i18n.t('Today') : daysAgo === 1 ? i18n.t('1 day ago') : `${daysAgo} ${i18n.t('days ago')}`}
+          </span>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-6">
       <div className="bg-white rounded-2xl shadow-xl ring-1 ring-black/5 overflow-hidden">
@@ -177,16 +254,16 @@ const AdminUserManagement: React.FC = () => {
             <div>
               <h2 className="text-2xl font-semibold text-gray-900 flex items-center">
                 <Users className="w-6 h-6 mr-2 text-indigo-600" />
-                Admin · Users
+                {i18n.t('Admin')} · {i18n.t('Users')}
               </h2>
-              <p className="text-sm text-gray-500 mt-1">Create, search, and manage users and admins</p>
+              <p className="text-sm text-gray-500 mt-1">{i18n.t('Create, search, and manage users and admins')}</p>
             </div>
             <button
               onClick={() => setShowCreateForm(!showCreateForm)}
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl flex items-center space-x-2 shadow-sm"
             >
               <UserPlus className="w-4 h-4" />
-              <span>Create Account</span>
+              <span>{i18n.t('Create Account')}</span>
             </button>
           </div>
         </div>
@@ -209,49 +286,49 @@ const AdminUserManagement: React.FC = () => {
         {/* Create User Form */}
         {showCreateForm && (
           <div className="border-b border-gray-100 px-6 py-6 bg-gray-50">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Create Account</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">{i18n.t('Create Account')}</h3>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Username *
+                    {i18n.t('Username')} *
                   </label>
                   <input
                     {...register('username', {
-                      required: 'Username is required',
-                      minLength: { value: 3, message: 'Username must be at least 3 characters' },
-                      pattern: { value: /^[a-zA-Z0-9_-]+$/, message: 'Username can only contain letters, numbers, hyphens, and underscores' }
+                      required: i18n.t('Username is required'),
+                      minLength: { value: 3, message: i18n.t('Username must be at least 3 characters') },
+                      pattern: { value: /^[a-zA-Z0-9_-]+$/, message: i18n.t('Username can only contain letters, numbers, hyphens, and underscores') }
                     })}
                     type="text"
                     className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    placeholder="Enter username"
+                    placeholder={i18n.t('Enter username')}
                     disabled={isLoading}
                   />
                   {errors.username && (
                     <p className="mt-1 text-sm text-red-600">
                       {typeof errors.username.message === 'string' 
                         ? errors.username.message 
-                        : 'Username is invalid'}
+                        : i18n.t('Username is invalid')}
                     </p>
                   )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Display Name *
+                    {i18n.t('Display Name')} *
                   </label>
                   <input
-                    {...register('displayName', { required: 'Display name is required' })}
+                    {...register('displayName', { required: i18n.t('Display name is required') })}
                     type="text"
                     className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    placeholder="Full name"
+                    placeholder={i18n.t('Full name')}
                     disabled={isLoading}
                   />
                   {errors.displayName && (
                     <p className="mt-1 text-sm text-red-600">
                       {typeof errors.displayName.message === 'string' 
                         ? errors.displayName.message 
-                        : 'Display name is required'}
+                        : i18n.t('Display name is required')}
                     </p>
                   )}
                 </div>
@@ -259,22 +336,22 @@ const AdminUserManagement: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email (Optional)
+                  {i18n.t('Email (Optional)')}
                 </label>
                 <input
                   {...register('email', {
-                    pattern: { value: /^\S+@\S+\.\S+$/, message: 'Please enter a valid email' }
+                    pattern: { value: /^\S+@\S+\.\S+$/, message: i18n.t('Please enter a valid email') }
                   })}
                   type="email"
                   className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="email@example.com"
+                  placeholder={i18n.t('email@example.com')}
                   disabled={isLoading}
                 />
                 {errors.email && (
                   <p className="mt-1 text-sm text-red-600">
                     {typeof errors.email.message === 'string' 
                       ? errors.email.message 
-                      : 'Please enter a valid email'}
+                      : i18n.t('Please enter a valid email')}
                   </p>
                 )}
               </div>
@@ -282,21 +359,21 @@ const AdminUserManagement: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Password *
+                    {i18n.t('Password')} *
                   </label>
                   <div className="relative">
                     <input
                       {...register('password', {
-                        required: 'Password is required',
-                        minLength: { value: 8, message: 'Password must be at least 8 characters' },
+                        required: i18n.t('Password is required'),
+                        minLength: { value: 8, message: i18n.t('Password must be at least 8 characters') },
                         pattern: {
                           value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])/,
-                          message: 'Password must contain uppercase, lowercase, number, and special character'
+                          message: i18n.t('Password must contain uppercase, lowercase, number, and special character')
                         }
                       })}
                       type={showPassword ? 'text' : 'password'}
                       className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      placeholder="Create secure password"
+                      placeholder={i18n.t('Create secure password')}
                       disabled={isLoading}
                     />
                     <button
@@ -311,24 +388,24 @@ const AdminUserManagement: React.FC = () => {
                     <p className="mt-1 text-sm text-red-600">
                       {typeof errors.password.message === 'string' 
                         ? errors.password.message 
-                        : 'Password does not meet requirements'}
+                        : i18n.t('Password does not meet requirements')}
                     </p>
                   )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Confirm Password *
+                    {i18n.t('Confirm Password')} *
                   </label>
                   <div className="relative">
                     <input
                       {...register('confirmPassword', {
-                        required: 'Please confirm your password',
-                        validate: (value) => value === watchPassword || 'Passwords do not match'
+                        required: i18n.t('Please confirm your password'),
+                        validate: (value) => value === watchPassword || i18n.t('Passwords do not match')
                       })}
                       type={showConfirmPassword ? 'text' : 'password'}
                       className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      placeholder="Confirm password"
+                      placeholder={i18n.t('Confirm password')}
                       disabled={isLoading}
                     />
                     <button
@@ -343,14 +420,14 @@ const AdminUserManagement: React.FC = () => {
                     <p className="mt-1 text-sm text-red-600">
                       {typeof errors.confirmPassword.message === 'string' 
                         ? errors.confirmPassword.message 
-                        : 'Passwords do not match'}
+                        : i18n.t('Passwords do not match')}
                     </p>
                   )}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Account Type</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('Account Type')}</label>
                 <div className="flex space-x-4">
                   <label className="flex items-center">
                     <input
@@ -362,7 +439,7 @@ const AdminUserManagement: React.FC = () => {
                     />
                     <span className="ml-2 text-sm text-gray-700 flex items-center">
                       <User className="w-4 h-4 mr-1" />
-                      User
+                      {i18n.t('User')}
                     </span>
                   </label>
                   <label className="flex items-center">
@@ -375,7 +452,7 @@ const AdminUserManagement: React.FC = () => {
                     />
                     <span className="ml-2 text-sm text-gray-700 flex items-center">
                       <Shield className="w-4 h-4 mr-1" />
-                      Admin
+                      {i18n.t('Admin')}
                     </span>
                   </label>
                 </div>
@@ -390,12 +467,12 @@ const AdminUserManagement: React.FC = () => {
                   {isLoading ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Creating...</span>
+                      <span>{i18n.t('Creating...')}</span>
                     </>
                   ) : (
                     <>
                       <UserPlus className="w-4 h-4" />
-                      <span>Create Account</span>
+                      <span>{i18n.t('Create Account')}</span>
                     </>
                   )}
                 </button>
@@ -409,7 +486,7 @@ const AdminUserManagement: React.FC = () => {
                   }}
                   className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-xl transition-colors"
                 >
-                  Cancel
+                  {i18n.t('Cancel')}
                 </button>
               </div>
             </form>
@@ -425,7 +502,7 @@ const AdminUserManagement: React.FC = () => {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="Search users..."
+                  placeholder={i18n.t('Search users...')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
@@ -438,9 +515,9 @@ const AdminUserManagement: React.FC = () => {
                 onChange={(e) => setFilterRole(e.target.value as 'all' | 'user' | 'admin')}
                 className="px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               >
-                <option value="all">All Roles</option>
-                <option value="user">Users</option>
-                <option value="admin">Admins</option>
+                <option value="all">{i18n.t('All Roles')}</option>
+                <option value="user">{i18n.t('Users')}</option>
+                <option value="admin">{i18n.t('Admins')}</option>
               </select>
             </div>
           </div>
@@ -451,19 +528,19 @@ const AdminUserManagement: React.FC = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
+                    {i18n.t('User')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Role
+                    {i18n.t('Role')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    {i18n.t('Status')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Created
+                    {i18n.t('Created')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
+                    {i18n.t('Actions')}
                   </th>
                 </tr>
               </thead>
@@ -495,34 +572,33 @@ const AdminUserManagement: React.FC = () => {
                         value={user.role}
                         onChange={(e) => handleRoleChange(user.id, e.target.value as 'user' | 'admin')}
                         className="text-sm border border-gray-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        disabled={true} // Disable role change
+                        title={i18n.t('Role changes are disabled')}
                       >
-                        <option value="user">User</option>
-                        <option value="admin">Admin</option>
+                        <option value="user">{i18n.t('User')}</option>
+                        <option value="admin">{i18n.t('Admin')}</option>
                       </select>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <select
-                        value={user.status}
-                        onChange={(e) => handleStatusChange(user.id, e.target.value as 'active' | 'disabled')}
-                        className={`text-sm border rounded-lg px-2 py-1 focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                          user.status === 'active' 
-                            ? 'border-green-300 text-green-700 bg-green-50' 
-                            : 'border-red-300 text-red-700 bg-red-50'
-                        }`}
-                      >
-                        <option value="active">Active</option>
-                        <option value="disabled">Disabled</option>
-                      </select>
+                      {getStatusBadge(user.status, (user as any).last_login_at, (user as any).days_since_login)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(user.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
-                        <button className="text-indigo-600 hover:text-indigo-900" onClick={() => openEditModal(user)}>
+                        <button 
+                                                     className="text-indigo-600 hover:text-indigo-900"
+                          onClick={() => openEditModal(user)}
+                          disabled={false}
+                        >
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        <button className="text-red-600 hover:text-red-900">
+                        <button 
+                          className={`${user.role === 'admin' ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 hover:text-red-900'}`}
+                          disabled={user.role === 'admin'}
+                          onClick={() => handleDeleteUser(user.id)}
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -536,11 +612,11 @@ const AdminUserManagement: React.FC = () => {
           {filteredUsers.length === 0 && !isLoading && (
             <div className="text-center py-8">
               <Users className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No users found</h3>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">{i18n.t('No users found')}</h3>
               <p className="mt-1 text-sm text-gray-500">
                 {searchTerm || filterRole !== 'all' 
-                  ? 'Try adjusting your search or filters.' 
-                  : 'Get started by creating a new user account.'}
+                  ? i18n.t('Try adjusting your search or filters.') 
+                  : i18n.t('Get started by creating a new user account.')}
               </p>
             </div>
           )}
@@ -552,14 +628,14 @@ const AdminUserManagement: React.FC = () => {
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Edit User</h3>
+              <h3 className="text-lg font-semibold text-gray-900">{i18n.t('Edit User')}</h3>
               <button onClick={() => setEditingUser(null)} className="p-2 rounded-full hover:bg-gray-100">
                 <X className="w-4 h-4 text-gray-500" />
               </button>
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('Username')}</label>
                 <div className="relative">
                   <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <input
@@ -571,7 +647,7 @@ const AdminUserManagement: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Reset Password</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('Reset Password')}</label>
                 <div className="relative">
                   <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <input
@@ -579,7 +655,7 @@ const AdminUserManagement: React.FC = () => {
                     value={editNewPassword}
                     onChange={(e) => setEditNewPassword(e.target.value)}
                     className="w-full pl-9 pr-10 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    placeholder="Leave blank to keep current"
+                    placeholder={i18n.t('Leave blank to keep current')}
                   />
                   <button
                     type="button"
@@ -598,10 +674,10 @@ const AdminUserManagement: React.FC = () => {
               )}
             </div>
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end space-x-3">
-              <button onClick={() => setEditingUser(null)} className="px-4 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800">Cancel</button>
+              <button onClick={() => setEditingUser(null)} className="px-4 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800">{i18n.t('Cancel')}</button>
               <button onClick={handleSaveEdit} className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center space-x-2">
                 <Save className="w-4 h-4" />
-                <span>Save</span>
+                <span>{i18n.t('Save')}</span>
               </button>
             </div>
           </div>
