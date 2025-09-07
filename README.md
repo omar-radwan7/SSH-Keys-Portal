@@ -1,88 +1,91 @@
-# HPC SSH Keys Portal
+HPC SSH Keys Portal
 
 A comprehensive web-based portal for managing SSH keys across HPC (High Performance Computing) environments. This system provides centralized SSH key management, automated deployment, user administration, and comprehensive auditing capabilities.
+ Features
+Core Functionality
 
-## 🚀 Features
+    SSH Key Management: Import existing keys, generate new keys (client-side or server-side), and manage key lifecycle
+    Automated Deployment: Deploy SSH keys to multiple managed hosts via secure SSH connections
+    Multi-tenancy: Support for multiple users with role-based access control
+    Key Lifecycle: Handle key expiration, rotation, and revocation
+    Audit Trail: Complete logging of all key operations and administrative actions
 
-### Core Functionality
-- **SSH Key Management**: Import existing keys, generate new keys (client-side or server-side), and manage key lifecycle
-- **Automated Deployment**: Deploy SSH keys to multiple managed hosts via secure SSH connections
-- **Multi-tenancy**: Support for multiple users with role-based access control
-- **Key Lifecycle**: Handle key expiration, rotation, and revocation
-- **Audit Trail**: Complete logging of all key operations and administrative actions
+User Features
 
-### User Features
-- **Key Import**: Upload existing SSH public keys with validation
-- **Key Generation**: 
-  - Client-side generation (keys generated in browser)
-  - Server-side generation (secure key generation with encrypted private key download)
-- **Key Management**: View, revoke, and manage personal SSH keys
-- **Multi-language Support**: Interface available in multiple languages
-- **Key Status Tracking**: Monitor key status (active, expired, revoked)
+    Key Import: Upload existing SSH public keys with validation
+    Key Generation:
+        Client-side generation (keys generated in browser)
+        Server-side generation (secure key generation with encrypted private key download)
+    Key Management: View, revoke, and manage personal SSH keys
+    Multi-language Support: Interface available in multiple languages
+    Key Status Tracking: Monitor key status (active, expired, revoked)
 
-### Administrative Features
-- **User Management**: Create, modify, and manage user accounts
-- **Host Management**: Add and configure managed HPC nodes
-- **Role-Based Access**: Admin, user, and auditor roles with appropriate permissions
-- **Bulk Operations**: Deploy keys to multiple hosts simultaneously
-- **System Metrics**: Dashboard with usage statistics and system health
-- **Policy Enforcement**: Configurable security policies for key algorithms and lengths
+Administrative Features
 
-### Security Features
-- **LDAP/AD Integration**: Enterprise directory authentication support
-- **JWT Authentication**: Secure session management
-- **Role-Based Authorization**: Granular permission system
-- **Encrypted Storage**: Secure storage of sensitive data
-- **Audit Logging**: Comprehensive activity tracking
-- **Key Validation**: Automatic validation of SSH key formats and security
+    User Management: Create, modify, and manage user accounts
+    Host Management: Add and configure managed HPC nodes
+    Role-Based Access: Admin, user, and auditor roles with appropriate permissions
+    Bulk Operations: Deploy keys to multiple hosts simultaneously
+    System Metrics: Dashboard with usage statistics and system health
+    Policy Enforcement: Configurable security policies for key algorithms and lengths
 
-## 🏗️ Architecture
+Security Features
 
-### Backend (Python/FastAPI)
-- **FastAPI**: Modern, fast web framework with automatic API documentation
-- **SQLAlchemy**: Database ORM with support for PostgreSQL and SQLite
-- **Pydantic**: Data validation and serialization
-- **LDAP3**: Enterprise directory integration
-- **Paramiko**: SSH automation for key deployment
-- **JWT**: Secure authentication tokens
-- **Cryptography**: Advanced cryptographic operations
+    LDAP/AD Integration: Enterprise directory authentication support
+    JWT Authentication: Secure session management
+    Role-Based Authorization: Granular permission system
+    Encrypted Storage: Secure storage of sensitive data
+    Audit Logging: Comprehensive activity tracking
+    Key Validation: Automatic validation of SSH key formats and security
 
-### Frontend (React/TypeScript)
-- **React 18**: Modern React with hooks and functional components
-- **TypeScript**: Type-safe JavaScript development
-- **Tailwind CSS**: Utility-first CSS framework for responsive design
-- **React Router**: Client-side routing
-- **Axios**: HTTP client for API communication
-- **Lucide React**: Beautiful, customizable icons
+Architecture
+Backend (Python/FastAPI)
 
-### Database
-- **PostgreSQL**: Production database (recommended)
-- **SQLite**: Development and testing database
-- **Migrations**: Structured schema versioning and updates
+    FastAPI: Modern, fast web framework with automatic API documentation
+    SQLAlchemy: Database ORM with support for PostgreSQL and SQLite
+    Pydantic: Data validation and serialization
+    LDAP3: Enterprise directory integration
+    Paramiko: SSH automation for key deployment
+    JWT: Secure authentication tokens
+    Cryptography: Advanced cryptographic operations
 
-## 📋 Requirements
+Frontend (React/TypeScript)
 
-### System Requirements
-- **Python**: 3.11 or higher
-- **Node.js**: 18 or higher
-- **Database**: PostgreSQL 14+ (production) or SQLite (development)
-- **Operating System**: Linux, macOS, or Windows
+    React 18: Modern React with hooks and functional components
+    TypeScript: Type-safe JavaScript development
+    Tailwind CSS: Utility-first CSS framework for responsive design
+    React Router: Client-side routing
+    Axios: HTTP client for API communication
+    Lucide React: Beautiful, customizable icons
 
-### Network Requirements
-- Portal server → LDAP/AD server (ports 389/636) - if using LDAP authentication
-- Portal server → Managed HPC nodes (port 22) - for SSH key deployment
-- Users → Portal web interface (ports 3000/3001)
+Database
 
-## 🚀 Quick Start (Development)
+    PostgreSQL: Production database (recommended)
+    SQLite: Development and testing database
+    Migrations: Structured schema versioning and updates
 
-### 1. Clone the Repository
-```bash
+Requirements
+System Requirements
+
+    Python: 3.11 or higher
+    Node.js: 18 or higher
+    Database: PostgreSQL 14+ (production) or SQLite (development)
+    Operating System: Linux, macOS, or Windows
+
+Network Requirements
+
+    Portal server → LDAP/AD server (ports 389/636) - if using LDAP authentication
+    Portal server → Managed HPC nodes (port 22) - for SSH key deployment
+    Users → Portal web interface (ports 3000/3001)
+
+ Quick Start (Development)
+1. Clone the Repository
+
 git clone <repository-url>
 cd "SSH keys portal"
-```
 
-### 2. Backend Setup
-```bash
+2. Backend Setup
+
 cd backend-py
 
 # Create virtual environment (optional but recommended)
@@ -107,10 +110,9 @@ EOF
 
 # Start the backend server
 python -m uvicorn app.main:app --host 0.0.0.0 --port 3000
-```
 
-### 3. Frontend Setup
-```bash
+3. Frontend Setup
+
 cd frontend
 
 # Install dependencies
@@ -124,53 +126,49 @@ EOF
 
 # Start the frontend development server
 npm start
-```
 
-### 4. Access the Application
-- **Frontend**: http://localhost:3001
-- **Backend API**: http://localhost:3000
-- **API Documentation**: http://localhost:3000/docs
+4. Access the Application
 
-### 5. Default Credentials (Development)
-- **Admin**: `admin` / `admin`
-- **Test User**: Available via test login (if enabled)
+    Frontend: http://localhost:3001
+    Backend API: http://localhost:3000
+    API Documentation: http://localhost:3000/docs
 
-## 🔧 Production Setup
+5. Default Credentials (Development)
 
-### Database Configuration (PostgreSQL)
+    Admin: admin / admin
+    Test User: Available via test login (if enabled)
 
-1. **Install PostgreSQL**:
-```bash
+🔧 Production Setup
+Database Configuration (PostgreSQL)
+
+    Install PostgreSQL:
+
 # Ubuntu/Debian
 sudo apt update && sudo apt install postgresql postgresql-contrib
 
 # RHEL/CentOS/Fedora
 sudo dnf install postgresql postgresql-server postgresql-contrib
-```
 
-2. **Create Database**:
-```bash
+    Create Database:
+
 sudo -u postgres psql
 CREATE DATABASE hpc_ssh_portal;
 CREATE USER ssh_portal_user WITH ENCRYPTED PASSWORD 'secure_password_here';
 GRANT ALL PRIVILEGES ON DATABASE hpc_ssh_portal TO ssh_portal_user;
 \q
-```
 
-3. **Run Migrations**:
-```bash
+    Run Migrations:
+
 cd backend-py
 # Update .env with PostgreSQL settings
 export DATABASE_URL="postgresql+psycopg2://ssh_portal_user:secure_password_here@localhost:5432/hpc_ssh_portal"
 export USE_SQLITE=false
 
 # Migrations will run automatically on startup
-```
 
-### Environment Configuration
+Environment Configuration
+Backend (.env)
 
-#### Backend (.env)
-```bash
 # Application
 ENV=production
 APP_NAME=HPC SSH Keys Portal
@@ -202,42 +200,36 @@ LDAP_AUDITOR_GROUPS=cn=SSH-Auditors,ou=Groups,dc=company,dc=com
 APPLY_SSH_USER=automation
 APPLY_SSH_KEY_PATH=/etc/ssh-portal/automation_key
 APPLY_STRICT_HOST_KEY_CHECK=true
-```
 
-#### Frontend (.env)
-```bash
+Frontend (.env)
+
 REACT_APP_API_BASE_URL=https://your-domain.com/api/v1
 REACT_APP_ALLOW_TEST_LOGIN=false
-```
 
-### SSH Key Deployment Setup
+SSH Key Deployment Setup
 
 The portal needs SSH access to managed hosts to deploy authorized_keys files:
 
-1. **Generate SSH key for automation**:
-```bash
-ssh-keygen -t ed25519 -f /etc/ssh-portal/automation_key -N ""
-```
+    Generate SSH key for automation:
 
-2. **Deploy public key to managed hosts**:
-```bash
+ssh-keygen -t ed25519 -f /etc/ssh-portal/automation_key -N ""
+
+    Deploy public key to managed hosts:
+
 # Copy to each managed host
 ssh-copy-id -i /etc/ssh-portal/automation_key.pub automation@hpc-node-1
 ssh-copy-id -i /etc/ssh-portal/automation_key.pub automation@hpc-node-2
-```
 
-3. **Configure appropriate permissions**:
-```bash
+    Configure appropriate permissions:
+
 chmod 600 /etc/ssh-portal/automation_key
 chown ssh-portal:ssh-portal /etc/ssh-portal/automation_key
-```
 
-### Production Deployment
+Production Deployment
+Option 1: Systemd Services
 
-#### Option 1: Systemd Services
+Backend Service (/etc/systemd/system/ssh-portal-backend.service):
 
-**Backend Service** (`/etc/systemd/system/ssh-portal-backend.service`):
-```ini
 [Unit]
 Description=SSH Portal Backend
 After=network.target postgresql.service
@@ -254,10 +246,9 @@ RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
-```
 
-**Frontend (Nginx Configuration)**:
-```nginx
+Frontend (Nginx Configuration):
+
 server {
     listen 80;
     server_name your-domain.com;
@@ -282,12 +273,11 @@ server {
         proxy_pass http://localhost:3000/health;
     }
 }
-```
 
-#### Option 2: Docker Deployment
+Option 2: Docker Deployment
 
-**docker-compose.yml**:
-```yaml
+docker-compose.yml:
+
 version: '3.8'
 services:
   postgres:
@@ -320,111 +310,99 @@ services:
 
 volumes:
   postgres_data:
-```
 
-## 📖 Usage Guide
+ Usage Guide
+For End Users
 
-### For End Users
+    Login: Use your credentials (LDAP/AD or local account)
+    Import SSH Key: Upload your existing public key
+    Generate New Key:
+        Client-side: Generate in browser (more secure)
+        Server-side: Generate on server (convenient, one-time download)
+    Manage Keys: View status, revoke keys, download private keys (server-generated only)
 
-1. **Login**: Use your credentials (LDAP/AD or local account)
-2. **Import SSH Key**: Upload your existing public key
-3. **Generate New Key**: 
-   - Client-side: Generate in browser (more secure)
-   - Server-side: Generate on server (convenient, one-time download)
-4. **Manage Keys**: View status, revoke keys, download private keys (server-generated only)
+For Administrators
 
-### For Administrators
+    User Management:
+        Create new user accounts
+        Assign roles (user, admin, auditor)
+        Reset passwords and manage user status
 
-1. **User Management**: 
-   - Create new user accounts
-   - Assign roles (user, admin, auditor)
-   - Reset passwords and manage user status
+    Host Management:
+        Add managed HPC nodes
+        Configure SSH connection details
+        Test connectivity
 
-2. **Host Management**:
-   - Add managed HPC nodes
-   - Configure SSH connection details
-   - Test connectivity
+    Key Deployment:
+        Select target hosts
+        Specify target username on remote hosts
+        Deploy all active keys to managed hosts
 
-3. **Key Deployment**:
-   - Select target hosts
-   - Specify target username on remote hosts
-   - Deploy all active keys to managed hosts
+    System Monitoring:
+        View usage statistics
+        Monitor system health
+        Review audit logs
 
-4. **System Monitoring**:
-   - View usage statistics
-   - Monitor system health
-   - Review audit logs
+ Troubleshooting
+Common Issues
 
-## 🔒 Security Considerations
+Login Loop: Clear browser storage
 
-- **Key Storage**: Private keys (server-generated) are encrypted and automatically deleted after download
-- **Network Security**: Use HTTPS in production, secure SSH connections for deployment
-- **Access Control**: Implement proper firewall rules and network segmentation
-- **Authentication**: Use LDAP/AD integration for enterprise environments
-- **Audit**: Enable comprehensive logging and regular security reviews
-- **Key Rotation**: Implement regular key rotation policies
-
-## 🛠️ Troubleshooting
-
-### Common Issues
-
-**Login Loop**: Clear browser storage
-```javascript
 localStorage.clear(); 
 sessionStorage.clear(); 
 location.reload();
-```
 
-**SSH Deployment Failures**:
-- Verify SSH connectivity to target hosts
-- Check SSH key permissions and paths
-- Ensure target user exists on remote hosts
-- Review backend logs for detailed error messages
+SSH Deployment Failures:
 
-**Database Connection Issues**:
-- Verify PostgreSQL is running and accessible
-- Check database credentials and connection string
-- Ensure database exists and user has proper permissions
+    Verify SSH connectivity to target hosts
+    Check SSH key permissions and paths
+    Ensure target user exists on remote hosts
+    Review backend logs for detailed error messages
 
-**LDAP Authentication Problems**:
-- Test LDAP connectivity from the server
-- Verify LDAP configuration parameters
-- Check user DN format and group memberships
+Database Connection Issues:
 
-### Health Checks
+    Verify PostgreSQL is running and accessible
+    Check database credentials and connection string
+    Ensure database exists and user has proper permissions
 
-- **Backend API**: `GET http://localhost:3000/health` → `{"success": true}`
-- **Database**: Check connection in backend logs
-- **Frontend**: Verify static files are served correctly
+LDAP Authentication Problems:
 
-## 📝 API Documentation
+    Test LDAP connectivity from the server
+    Verify LDAP configuration parameters
+    Check user DN format and group memberships
+
+Health Checks
+
+    Backend API: GET http://localhost:3000/health → {"success": true}
+    Database: Check connection in backend logs
+    Frontend: Verify static files are served correctly
+
+ API Documentation
 
 The backend provides comprehensive API documentation via FastAPI's automatic documentation:
 
-- **Swagger UI**: http://localhost:3000/docs
-- **ReDoc**: http://localhost:3000/redoc
-- **OpenAPI Schema**: http://localhost:3000/openapi.json
+    Swagger UI: http://localhost:3000/docs
+    ReDoc: http://localhost:3000/redoc
+    OpenAPI Schema: http://localhost:3000/openapi.json
 
-## 🤝 Contributing
+Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+    Fork the repository
+    Create a feature branch (git checkout -b feature/amazing-feature)
+    Commit your changes (git commit -m 'Add some amazing feature')
+    Push to the branch (git push origin feature/amazing-feature)
+    Open a Pull Request
 
-## 📄 License
+ License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🆘 Support
+Support
 
 For support and questions:
-- Create an issue in the repository
-- Check the troubleshooting section
-- Review the API documentation
-- Examine backend logs for detailed error information
 
----
+    Create an issue in the repository
+    Check the troubleshooting section
+    Review the API documentation
+    Examine backend logs for detailed error information
 
-**Note**: This is a production-ready SSH key management system. Ensure proper security measures, regular backups, and appropriate access controls are in place before deploying in a production environment.
+Note: This is a production-ready SSH key management system. Ensure proper security measures, regular backups, and appropriate access controls are in place before deploying in a production environment.
