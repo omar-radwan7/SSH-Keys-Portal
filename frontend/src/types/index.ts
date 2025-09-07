@@ -3,6 +3,9 @@ export interface User {
   username: string;
   display_name: string;
   role: 'user' | 'admin' | 'auditor';
+  email?: string;
+  status: 'active' | 'disabled';
+  created_at: string;
 }
 
 export interface SSHKey {

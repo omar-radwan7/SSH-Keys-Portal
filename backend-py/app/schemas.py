@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, constr
+from pydantic import BaseModel, Field, constr, EmailStr, field_validator, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 
@@ -11,6 +11,27 @@ class TokenUser(BaseModel):
 	username: str
 	display_name: str
 	role: str
+
+class RegisterRequest(BaseModel):
+	username: constr(strip_whitespace=True, min_length=3, max_length=50)
+	password: constr(min_length=8, max_length=128)
+	email: Optional[EmailStr] = None
+	display_name: constr(strip_whitespace=True, min_length=1, max_length=255) = Field(..., alias="displayName")
+	# No role field - all registrations are users
+
+	@field_validator('email', mode='before')
+	@classmethod
+	def empty_string_to_none(cls, v):
+		if isinstance(v, str) and v.strip() == '':
+			return None
+		return v
+
+	model_config = ConfigDict(populate_by_name=True)
+
+class RegisterResponse(BaseModel):
+	success: bool
+	message: str
+	user: Optional[TokenUser] = None
 
 class LoginResponse(BaseModel):
 	token: str
@@ -123,3 +144,12 @@ class UserHostAccountOut(BaseModel):
 	created_at: datetime
 	class Config:
 		from_attributes = True 
+
+# User account update schemas
+class ChangeUsernameRequest(BaseModel):
+	newUsername: constr(strip_whitespace=True, min_length=3, max_length=50)
+	currentPassword: constr(min_length=1)
+
+class ChangePasswordRequest(BaseModel):
+	currentPassword: constr(min_length=1)
+	newPassword: constr(min_length=8, max_length=128) 

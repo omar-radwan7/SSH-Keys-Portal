@@ -130,7 +130,11 @@ const ImportKeyModal: React.FC<Props> = ({ onClose, onSuccess }: Props) => {
                 </button>
               </div>
               {errors.publicKey && (
-                <p className="mt-1 text-sm text-red-600">{errors.publicKey.message}</p>
+                <p className="mt-1 text-sm text-red-600">
+                  {typeof errors.publicKey.message === 'string' 
+                    ? errors.publicKey.message 
+                    : 'Public key is required'}
+                </p>
               )}
             </div>
 

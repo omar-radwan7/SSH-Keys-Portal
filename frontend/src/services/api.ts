@@ -38,7 +38,7 @@ class ApiService {
 
   // Authentication
   async login(username: string, password: string): Promise<ApiResponse<{ token: string; user: User }>> {
-    const allowTest = (process.env.REACT_APP_ALLOW_TEST_LOGIN === 'true') && process.env.NODE_ENV !== 'production';
+    const allowTest = process.env.NODE_ENV !== 'production';
     const path = allowTest ? '/auth/test-login' : '/auth/login';
 
     const response: AxiosResponse<ApiResponse<{ token: string; user: User }>> = await this.api.post(path, {
@@ -50,6 +50,37 @@ class ApiService {
 
   async logout(): Promise<ApiResponse> {
     const response: AxiosResponse<ApiResponse> = await this.api.post('/auth/logout');
+    return response.data;
+  }
+
+  async register(userData: {
+    username: string;
+    password: string;
+    email?: string;
+    displayName: string;
+  }): Promise<ApiResponse<{ token: string; user: User }>> {
+    const response: AxiosResponse<ApiResponse<{ token: string; user: User }>> = await this.api.post('/auth/register', {
+      username: userData.username,
+      password: userData.password,
+      email: userData.email && userData.email.trim() !== '' ? userData.email : undefined,
+      displayName: userData.displayName,
+    });
+    return response.data;
+  }
+
+  async updateMyUsername(newUsername: string, currentPassword: string): Promise<ApiResponse<{ token: string; user: User }>> {
+    const response: AxiosResponse<ApiResponse<{ token: string; user: User }>> = await this.api.put('/auth/change-username', {
+      newUsername,
+      currentPassword,
+    });
+    return response.data;
+  }
+
+  async updateMyPassword(currentPassword: string, newPassword: string): Promise<ApiResponse> {
+    const response: AxiosResponse<ApiResponse> = await this.api.put('/auth/change-password', {
+      currentPassword,
+      newPassword,
+    });
     return response.data;
   }
 
@@ -209,6 +240,20 @@ class ApiService {
     return response.data;
   }
 
+  async adminUpdateUsername(userId: string, newUsername: string): Promise<ApiResponse> {
+    const response: AxiosResponse<ApiResponse> = await this.api.put(`/admin/users/${userId}/username`, {
+      new_username: newUsername,
+    });
+    return response.data;
+  }
+
+  async adminResetPassword(userId: string, newPassword: string): Promise<ApiResponse> {
+    const response: AxiosResponse<ApiResponse> = await this.api.put(`/admin/users/${userId}/password`, {
+      new_password: newPassword,
+    });
+    return response.data;
+  }
+
   async updateUserRole(userId: string, role: string): Promise<ApiResponse> {
     const response: AxiosResponse<ApiResponse> = await this.api.put(`/admin/users/${userId}/role`, { role });
     return response.data;
@@ -239,6 +284,24 @@ class ApiService {
   async applyAuthorizedKeys(username: string): Promise<ApiResponse<{ applied: any[]; checksum: string }>> {
     const response: AxiosResponse<ApiResponse<{ applied: any[]; checksum: string }>> = await this.api.post(`/admin/apply-legacy`, null, {
       params: { username },
+    });
+    return response.data;
+  }
+
+  // Admin User Management
+  async createUser(userData: {
+    username: string;
+    password: string;
+    email?: string;
+    displayName: string;
+    role: 'user' | 'admin';
+  }): Promise<ApiResponse<{ user: User }>> {
+    const endpoint = userData.role === 'admin' ? '/admin/create-admin' : '/admin/create-user';
+    const response: AxiosResponse<ApiResponse<any>> = await this.api.post(endpoint, {
+      username: userData.username,
+      password: userData.password,
+      email: userData.email,
+      display_name: userData.displayName,
     });
     return response.data;
   }

@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { Settings, Shield, Users, Server, Key, AlertCircle, CheckCircle, Lock, Eye, EyeOff } from 'lucide-react';
+import AdminUserManagement from './AdminUserManagement';
 
 type ManagedHost = { id: string; hostname: string; address: string; os_family: string };
 
 const Admin: React.FC = () => {
   const { state: authState } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'hosts' | 'users' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'hosts' | 'users' | 'settings'>('users');
   const [hosts, setHosts] = useState<ManagedHost[]>([]);
   const [hostname, setHostname] = useState('hpc-node-1');
   const [address, setAddress] = useState('10.0.0.10');
@@ -130,6 +131,19 @@ const Admin: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <Server className="w-4 h-4" />
                 <span>Hosts</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'users'
+                  ? 'border-red-500 text-red-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <Users className="w-4 h-4" />
+                <span>Users</span>
               </div>
             </button>
             <button
@@ -278,6 +292,10 @@ const Admin: React.FC = () => {
           </div>
         )}
 
+        {activeTab === 'users' && (
+          <AdminUserManagement />
+        )}
+
         {activeTab === 'settings' && (
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow p-6">
@@ -400,7 +418,7 @@ const Admin: React.FC = () => {
                 </div>
               )}
             </div>
-          </div>
+      </div>
         )}
       </main>
     </div>

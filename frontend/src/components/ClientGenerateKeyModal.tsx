@@ -365,7 +365,11 @@ const ClientGenerateKeyModal: React.FC<Props> = ({ onClose, onSuccess }: Props) 
                 <option value="ecdsa-sha2-nistp521">ECDSA P-521</option>
               </select>
               {errors.algorithm && (
-                <p className="mt-1 text-sm text-red-600">{errors.algorithm.message}</p>
+                <p className="mt-1 text-sm text-red-600">
+                  {typeof errors.algorithm.message === 'string' 
+                    ? errors.algorithm.message 
+                    : 'Algorithm is required'}
+                </p>
               )}
             </div>
 
@@ -382,9 +386,13 @@ const ClientGenerateKeyModal: React.FC<Props> = ({ onClose, onSuccess }: Props) 
                 <option value={3072}>3072 bits</option>
                 <option value={4096}>4096 bits</option>
               </select>
-              {errors.bitLength && (
-                <p className="mt-1 text-sm text-red-600">{errors.bitLength.message}</p>
-              )}
+                              {errors.bitLength && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {typeof errors.bitLength.message === 'string' 
+                      ? errors.bitLength.message 
+                      : 'Bit length is required'}
+                  </p>
+                )}
             </div>
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

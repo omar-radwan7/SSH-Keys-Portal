@@ -8,17 +8,21 @@ import uuid
 class User(Base):
 	__tablename__ = "users"
 	id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-	external_id = Column(String(255), unique=True, nullable=False)
+	external_id = Column(String(255), unique=True, nullable=True)  # Made nullable for local accounts
 	username = Column(String(255), unique=True, nullable=False)
 	email = Column(String(255))
 	display_name = Column(String(255), nullable=False)
+	password_hash = Column(String(255), nullable=True)  # For local accounts
 	role = Column(String(20), nullable=False, default='user')
 	status = Column(String(20), nullable=False, default='active')
+	is_local_account = Column(Boolean, default=True)  # True for registered accounts, False for LDAP
 	created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+	last_login_at = Column(DateTime(timezone=True))
+	last_activity_at = Column(DateTime(timezone=True))
 
 	__table_args__ = (
 		CheckConstraint("role in ('user','admin','auditor')"),
-		CheckConstraint("status in ('active','disabled')"),
+		CheckConstraint("status in ('active','inactive','new')"),
 	)
 
 	ssh_keys = relationship("SSHKey", back_populates="user", cascade="all,delete")

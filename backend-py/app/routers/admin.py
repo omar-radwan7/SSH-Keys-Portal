@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 import csv
 import json
 import io
+from ..utils.auth import validate_username, validate_password_strength, hash_password
 
 router = APIRouter()
 
@@ -606,6 +607,87 @@ async def update_user_status(
 		message=f"Updated {target_user.username} status from {old_status} to {new_status}"
 	)
 
+@router.put("/users/{user_id}/username", response_model=ApiResponse)
+async def admin_update_username(
+	user_id: str,
+	payload: dict,
+	request: Request,
+	db: Session = Depends(get_db)
+):
+	"""Admin updates a user's username"""
+	admin_user = get_current_user_from_auth(request, db)
+	if admin_user.role != 'admin':
+		raise HTTPException(status_code=403, detail="Admin access required")
+
+	new_username = (payload.get('new_username') or '').strip()
+	if not new_username:
+		raise HTTPException(status_code=400, detail="new_username is required")
+
+	valid, errors = validate_username(new_username)
+	if not valid:
+		raise HTTPException(status_code=400, detail=f"Invalid username: {'; '.join(errors)}")
+
+	user = db.query(User).filter(User.id == user_id).first()
+	if not user:
+		raise HTTPException(status_code=404, detail="User not found")
+
+	existing = db.query(User).filter(User.username == new_username).first()
+	if existing and existing.id != user.id:
+		raise HTTPException(status_code=400, detail="Username already exists")
+
+	old_username = user.username
+	user.username = new_username
+	db.commit()
+
+	log_audit(
+		db, actor_user_id=admin_user.id, action="admin_updated_username",
+		entity="user", entity_id=user.id,
+		metadata={"old_username": old_username, "new_username": new_username, "target_user_id": user.id},
+		source_ip=request.client.host if request.client else "0.0.0.0",
+		user_agent=request.headers.get("user-agent", "")
+	)
+
+	return ApiResponse(success=True, message=f"Username updated to {new_username}")
+
+@router.put("/users/{user_id}/password", response_model=ApiResponse)
+async def admin_reset_password(
+	user_id: str,
+	payload: dict,
+	request: Request,
+	db: Session = Depends(get_db)
+):
+	"""Admin resets a user's password (local accounts only)"""
+	admin_user = get_current_user_from_auth(request, db)
+	if admin_user.role != 'admin':
+		raise HTTPException(status_code=403, detail="Admin access required")
+
+	new_password = payload.get('new_password') or ''
+	if not new_password:
+		raise HTTPException(status_code=400, detail="new_password is required")
+
+	valid, errors = validate_password_strength(new_password)
+	if not valid:
+		raise HTTPException(status_code=400, detail=f"Password requirements not met: {'; '.join(errors)}")
+
+	user = db.query(User).filter(User.id == user_id).first()
+	if not user:
+		raise HTTPException(status_code=404, detail="User not found")
+	if not user.is_local_account:
+		raise HTTPException(status_code=400, detail="Cannot reset password for non-local accounts")
+
+	user.password_hash = hash_password(new_password)
+	db.commit()
+
+	log_audit(
+		db, actor_user_id=admin_user.id, action="admin_reset_password",
+		entity="user", entity_id=user.id,
+		metadata={"target_username": user.username, "target_user_id": user.id},
+		source_ip=request.client.host if request.client else "0.0.0.0",
+		user_agent=request.headers.get("user-agent", "")
+	)
+
+	return ApiResponse(success=True, message="Password reset successfully")
+
 @router.get("/security/alerts", response_model=ApiResponse)
 async def get_security_alerts(
 	request: Request,
@@ -689,4 +771,210 @@ async def detect_unusual_activity(
 			"alerts": alerts
 		},
 		message=f"Security scan completed. {len(alerts)} new alerts detected."
-	) 
+	)
+
+@router.post("/create-admin", response_model=ApiResponse)
+async def create_admin_account(
+	admin_data: dict,
+	request: Request,
+	db: Session = Depends(get_db)
+):
+	"""Create a new admin account - only accessible by existing admins"""
+	# Get current user and verify admin role
+	current_user = get_current_user_from_auth(request, db)
+	if current_user.role != 'admin':
+		raise HTTPException(status_code=403, detail="Only admins can create admin accounts")
+	
+	source_ip = request.client.host if request.client else "0.0.0.0"
+	
+	try:
+		# Import password utilities
+		from ..utils.auth import hash_password, validate_password_strength, validate_username
+		
+		# Extract data
+		username = admin_data.get('username', '').strip()
+		password = admin_data.get('password', '')
+		email = admin_data.get('email', '').strip() or None
+		display_name = admin_data.get('display_name', '').strip()
+		
+		if not all([username, password, display_name]):
+			raise HTTPException(status_code=400, detail="Username, password, and display name are required")
+		
+		# Validate username format
+		username_valid, username_errors = validate_username(username)
+		if not username_valid:
+			raise HTTPException(status_code=400, detail=f"Invalid username: {'; '.join(username_errors)}")
+		
+		# Validate password strength
+		password_valid, password_errors = validate_password_strength(password)
+		if not password_valid:
+			raise HTTPException(status_code=400, detail=f"Password requirements not met: {'; '.join(password_errors)}")
+		
+		# Check if username already exists
+		existing_user = db.query(User).filter(User.username == username).first()
+		if existing_user:
+			raise HTTPException(status_code=400, detail="Username already exists")
+		
+		# Check if email already exists (if provided)
+		if email:
+			existing_email = db.query(User).filter(User.email == email).first()
+			if existing_email:
+				raise HTTPException(status_code=400, detail="Email address already registered")
+		
+		# Hash the password
+		password_hash = hash_password(password)
+		
+		# Create new admin user
+		new_admin = User(
+			username=username,
+			email=email,
+			display_name=display_name,
+			password_hash=password_hash,
+			role='admin',  # Create as admin
+			is_local_account=True,
+			external_id=None
+		)
+		
+		db.add(new_admin)
+		db.commit()
+		db.refresh(new_admin)
+		
+		# Log the admin creation
+		log_audit(
+			db, actor_user_id=current_user.id, action="admin_account_created",
+			entity="user", entity_id=new_admin.id,
+			metadata={
+				"created_username": new_admin.username,
+				"created_by": current_user.username,
+				"account_type": "admin"
+			},
+			source_ip=source_ip, user_agent=request.headers.get("user-agent", "")
+		)
+		
+		return ApiResponse(
+			success=True,
+			message=f"Admin account '{username}' created successfully",
+			data={
+				"user": {
+					"id": new_admin.id,
+					"username": new_admin.username,
+					"display_name": new_admin.display_name,
+					"role": new_admin.role,
+					"created_at": new_admin.created_at.isoformat()
+				}
+			}
+		)
+		
+	except HTTPException:
+		raise
+	except Exception as e:
+		log_audit(
+			db, actor_user_id=current_user.id, action="admin_creation_failed",
+			entity="user", entity_id=current_user.id,
+			metadata={"error": str(e), "attempted_username": admin_data.get('username', 'unknown')},
+			source_ip=source_ip, user_agent=request.headers.get("user-agent", "")
+		)
+		raise HTTPException(status_code=500, detail="Failed to create admin account")
+
+@router.post("/create-user", response_model=ApiResponse)
+async def create_user_account(
+	user_data: dict,
+	request: Request,
+	db: Session = Depends(get_db)
+):
+	"""Create a new user account - only accessible by admins"""
+	# Get current user and verify admin role
+	current_user = get_current_user_from_auth(request, db)
+	if current_user.role != 'admin':
+		raise HTTPException(status_code=403, detail="Only admins can create user accounts")
+	
+	source_ip = request.client.host if request.client else "0.0.0.0"
+	
+	try:
+		# Import password utilities
+		from ..utils.auth import hash_password, validate_password_strength, validate_username
+		
+		# Extract data
+		username = user_data.get('username', '').strip()
+		password = user_data.get('password', '')
+		email = user_data.get('email', '').strip() or None
+		display_name = user_data.get('display_name', '').strip()
+		
+		if not all([username, password, display_name]):
+			raise HTTPException(status_code=400, detail="Username, password, and display name are required")
+		
+		# Validate username format
+		username_valid, username_errors = validate_username(username)
+		if not username_valid:
+			raise HTTPException(status_code=400, detail=f"Invalid username: {'; '.join(username_errors)}")
+		
+		# Validate password strength
+		password_valid, password_errors = validate_password_strength(password)
+		if not password_valid:
+			raise HTTPException(status_code=400, detail=f"Password requirements not met: {'; '.join(password_errors)}")
+		
+		# Check if username already exists
+		existing_user = db.query(User).filter(User.username == username).first()
+		if existing_user:
+			raise HTTPException(status_code=400, detail="Username already exists")
+		
+		# Check if email already exists (if provided)
+		if email:
+			existing_email = db.query(User).filter(User.email == email).first()
+			if existing_email:
+				raise HTTPException(status_code=400, detail="Email address already registered")
+		
+		# Hash the password
+		password_hash = hash_password(password)
+		
+		# Create new user
+		new_user = User(
+			username=username,
+			email=email,
+			display_name=display_name,
+			password_hash=password_hash,
+			role='user',  # Create as user
+			is_local_account=True,
+			external_id=None
+		)
+		
+		db.add(new_user)
+		db.commit()
+		db.refresh(new_user)
+		
+		# Log the user creation
+		log_audit(
+			db, actor_user_id=current_user.id, action="user_account_created",
+			entity="user", entity_id=new_user.id,
+			metadata={
+				"created_username": new_user.username,
+				"created_by": current_user.username,
+				"account_type": "user"
+			},
+			source_ip=source_ip, user_agent=request.headers.get("user-agent", "")
+		)
+		
+		return ApiResponse(
+			success=True,
+			message=f"User account '{username}' created successfully",
+			data={
+				"user": {
+					"id": new_user.id,
+					"username": new_user.username,
+					"display_name": new_user.display_name,
+					"role": new_user.role,
+					"created_at": new_user.created_at.isoformat()
+				}
+			}
+		)
+		
+	except HTTPException:
+		raise
+	except Exception as e:
+		log_audit(
+			db, actor_user_id=current_user.id, action="user_creation_failed",
+			entity="user", entity_id=current_user.id,
+			metadata={"error": str(e), "attempted_username": user_data.get('username', 'unknown')},
+			source_ip=source_ip, user_agent=request.headers.get("user-agent", "")
+		)
+		raise HTTPException(status_code=500, detail="Failed to create user account") 

@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { SSHKey } from '../types';
 import apiService from '../services/api';
 import { Key, Plus, Trash2, Download, AlertTriangle, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Lock, User as UserIcon } from 'lucide-react';
 import ImportKeyModal from './ImportKeyModal';
 import GenerateKeyModal from './GenerateKeyModal';
 import ClientGenerateKeyModal from './ClientGenerateKeyModal';
@@ -15,6 +16,12 @@ const Dashboard: React.FC = () => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [showClientGenerateModal, setShowClientGenerateModal] = useState(false);
+  const [showAccountSettings, setShowAccountSettings] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [accountMsg, setAccountMsg] = useState<string>('');
+  const [accountErr, setAccountErr] = useState<string>('');
 
   useEffect(() => {
     loadKeys();
@@ -91,6 +98,14 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="flex items-center space-x-4">
               {authState.user?.role === 'admin' && (
+                <button
+                  onClick={() => setShowAccountSettings(!showAccountSettings)}
+                  className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-md text-sm font-medium"
+                >
+                  Account
+                </button>
+              )}
+              {authState.user?.role === 'admin' && (
                 <Link to="/admin" className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium">
                   Admin
                 </Link>
@@ -114,6 +129,97 @@ const Dashboard: React.FC = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {showAccountSettings && (
+          <div className="mb-8 bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Account Settings</h3>
+            {accountErr && (
+              <div className="mb-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2">{accountErr}</div>
+            )}
+            {accountMsg && (
+              <div className="mb-3 text-sm text-green-700 bg-green-50 border border-green-200 rounded p-2">{accountMsg}</div>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 className="font-medium text-gray-800 mb-2 flex items-center"><UserIcon className="w-4 h-4 mr-2" /> Change Username</h4>
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    placeholder="New username"
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <input
+                    type="password"
+                    placeholder="Current password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <button
+                    onClick={async () => {
+                      setAccountErr(''); setAccountMsg('');
+                      try {
+                        const res = await apiService.updateMyUsername(newUsername, currentPassword);
+                        if (res.success && res.data) {
+                          const { token, user } = res.data as any;
+                          localStorage.setItem('auth_token', token);
+                          localStorage.setItem('user', JSON.stringify(user));
+                          setAccountMsg('Username updated');
+                        } else {
+                          setAccountErr(res.message || 'Failed to update username');
+                        }
+                      } catch (e: any) {
+                        setAccountErr(e.response?.data?.detail || 'Failed to update username');
+                      }
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                  >
+                    Save Username
+                  </button>
+                </div>
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-800 mb-2 flex items-center"><Lock className="w-4 h-4 mr-2" /> Change Password</h4>
+                <div className="space-y-2">
+                  <input
+                    type="password"
+                    placeholder="Current password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <input
+                    type="password"
+                    placeholder="New password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <button
+                    onClick={async () => {
+                      setAccountErr(''); setAccountMsg('');
+                      try {
+                        const res = await apiService.updateMyPassword(currentPassword, newPassword);
+                        if (res.success) {
+                          setAccountMsg('Password updated');
+                          setNewPassword('');
+                        } else {
+                          setAccountErr(res.message || 'Failed to update password');
+                        }
+                      } catch (e: any) {
+                        setAccountErr(e.response?.data?.detail || 'Failed to update password');
+                      }
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                  >
+                    Save Password
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Page Title */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900">My SSH Keys</h2>
