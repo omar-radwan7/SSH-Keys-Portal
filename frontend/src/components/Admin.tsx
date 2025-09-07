@@ -1,16 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import { Settings, Shield, Users, Server, Key, AlertCircle, CheckCircle, Lock, Eye, EyeOff, LogOut } from 'lucide-react';
+import { Settings, Shield, Users, Server, Key, AlertCircle, CheckCircle, Lock, Eye, EyeOff, LogOut, Plus, Download, Trash2 } from 'lucide-react';
 import AdminUserManagement from './AdminUserManagement';
 import LanguageSelector from './LanguageSelector';
+import ImportKeyModal from './ImportKeyModal';
+import GenerateKeyModal from './GenerateKeyModal';
+import ClientGenerateKeyModal from './ClientGenerateKeyModal';
+import { SSHKey } from '../types';
 import i18n from '../services/i18n';
 
 type ManagedHost = { id: string; hostname: string; address: string; os_family: string };
 
 const Admin: React.FC = () => {
   const { state: authState, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'hosts' | 'users' | 'settings'>('users');
+  const [activeTab, setActiveTab] = useState<'overview' | 'hosts' | 'users' | 'keys' | 'settings'>('users');
   const [hosts, setHosts] = useState<ManagedHost[]>([]);
   const [userStats, setUserStats] = useState({ total: 0, active: 0, inactive: 0, new: 0 });
   const [keyStats, setKeyStats] = useState({ total: 0, active: 0 });
@@ -20,6 +24,12 @@ const Admin: React.FC = () => {
   const [osFamily, setOsFamily] = useState('linux');
   const [username, setUsername] = useState('hpcuser');
   const [message, setMessage] = useState('');
+  
+  // SSH Key management states
+  const [keys, setKeys] = useState<SSHKey[]>([]);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [showClientGenerateModal, setShowClientGenerateModal] = useState(false);
   
   // Password change states
   const [showPasswordChange, setShowPasswordChange] = useState(false);
@@ -50,46 +60,70 @@ const Admin: React.FC = () => {
           active: list.length // Assume all hosts are active for now
         });
       }
-    } catch {}
-  };
+    } catch (error) {
+      console.error('Failed to load hosts:', error);
+    }
 
-  const loadStats = async () => {
+    // Load metrics
     try {
-      // Load user stats
-      const userResponse = await api.getUsers();
-      if (userResponse.success && userResponse.data) {
-        const users = userResponse.data.users || [];
-        const stats = {
-          total: users.length,
-          active: users.filter((u: any) => u.status === 'active').length,
-          inactive: users.filter((u: any) => u.status === 'inactive').length,
-          new: users.filter((u: any) => u.status === 'new').length,
-        };
-        setUserStats(stats);
-      }
-      
-      // Load real SSH key stats
-      try {
-        const keyResponse = await api.getAdminMetrics();
-        if (keyResponse.success && keyResponse.data) {
-          const keyData = keyResponse.data;
-          setKeyStats({ 
-            total: keyData.total_keys || 0, 
-            active: keyData.active_keys || 0 
-          });
-        }
-      } catch (keyError) {
-        // If metrics endpoint fails, try to get basic count
-        setKeyStats({ total: 0, active: 0 });
+      const metricsResponse = await api.getAdminMetrics();
+      if (metricsResponse.success && metricsResponse.data) {
+        const data = metricsResponse.data as any;
+        setUserStats({
+          total: data.total_users || 0,
+          active: data.active_users || 0,
+          inactive: data.inactive_users || 0,
+          new: data.new_users || 0
+        });
+        setKeyStats({
+          total: data.total_keys || 0,
+          active: data.active_keys || 0
+        });
       }
     } catch (error) {
-      console.error('Failed to load stats:', error);
+      console.error('Failed to load metrics:', error);
+    }
+  };
+
+  const loadKeys = async () => {
+    try {
+      const response = await api.getMyKeys();
+      if (response.success && response.data) {
+        const keysData = (response.data as any).keys || response.data;
+        setKeys(Array.isArray(keysData) ? keysData : []);
+      } else {
+        setKeys([]);
+      }
+    } catch (error) {
+      console.error('Failed to load keys:', error);
+      setKeys([]);
+    }
+  };
+
+  const revokeKey = async (keyId: string) => {
+    if (!window.confirm(i18n.t('dashboard.confirmRevoke'))) {
+      return;
+    }
+
+    try {
+      const response = await api.revokeKey(keyId);
+      if (response.success) {
+        setMessage(i18n.t('dashboard.keyRevoked'));
+        loadKeys(); // Reload the keys list
+        setTimeout(() => setMessage(''), 3000);
+      } else {
+        setMessage(response.error || 'Failed to revoke key');
+        setTimeout(() => setMessage(''), 3000);
+      }
+    } catch (error) {
+      setMessage('Failed to revoke key');
+      setTimeout(() => setMessage(''), 3000);
     }
   };
 
   useEffect(() => { 
     load(); 
-    loadStats();
+    loadKeys();
   }, []);
 
   const addHost = async () => {
@@ -225,6 +259,17 @@ const Admin: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <Users className="w-4 h-4" />
                 <span>{i18n.t('admin.users')}</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('keys')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'keys' ? 'border-red-500 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <Key className="w-4 h-4" />
+                <span>{i18n.t('admin.sshKeys')}</span>
               </div>
             </button>
             <button
@@ -379,6 +424,140 @@ const Admin: React.FC = () => {
           <AdminUserManagement />
         )}
 
+        {activeTab === 'keys' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg shadow">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h2 className="text-lg font-medium text-gray-900">{i18n.t('admin.sshKeys')}</h2>
+                    <p className="text-sm text-gray-600 mt-1">{i18n.t('admin.sshKeysDescription')}</p>
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {keys.length} {keys.length === 1 ? 'key' : 'keys'}
+                  </div>
+                </div>
+              </div>
+
+              {message && (
+                <div className="px-6 py-3 bg-green-50 border-b border-green-200">
+                  <div className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
+                    <span className="text-green-700 text-sm">{message}</span>
+                  </div>
+                </div>
+              )}
+
+              {keys.length === 0 ? (
+                <div className="px-6 py-12 text-center">
+                  <Key className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">{i18n.t('dashboard.noSSHKeys')}</h3>
+                  <p className="text-gray-600 mb-6">{i18n.t('dashboard.getStarted')}</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          {i18n.t('dashboard.algorithm')}
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          {i18n.t('dashboard.fingerprint')}
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          {i18n.t('dashboard.status')}
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          {i18n.t('dashboard.expires')}
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          {i18n.t('dashboard.created')}
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          {i18n.t('dashboard.actions')}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {keys.map((key) => (
+                        <tr key={key.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <div className="flex items-center">
+                              <Key className="w-4 h-4 text-gray-400 mr-2" />
+                              <span className="font-mono">{key.algorithm}</span>
+                              {key.bit_length && (
+                                <span className="ml-2 text-xs text-gray-500">({key.bit_length} bits)</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
+                              {key.fingerprint_sha256.substring(0, 16)}...
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              key.status === 'active' ? 'bg-green-100 text-green-800' :
+                              key.status === 'revoked' ? 'bg-red-100 text-red-800' :
+                              'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {key.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {key.expires_at ? new Date(key.expires_at).toLocaleDateString() : i18n.t('dashboard.never')}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {new Date(key.created_at).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <button
+                              onClick={() => revokeKey(key.id)}
+                              className="text-red-600 hover:text-red-900 flex items-center space-x-1"
+                              disabled={key.status === 'revoked'}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              <span>{i18n.t('dashboard.revokeKey')}</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Add Key Actions */}
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                <div className="flex justify-center space-x-3">
+                  <button
+                    onClick={() => setShowImportModal(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>{i18n.t('dashboard.importKey')}</span>
+                  </button>
+                  <button
+                    onClick={() => setShowClientGenerateModal(true)}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2"
+                  >
+                    <Key className="w-4 h-4" />
+                    <span>{i18n.t('dashboard.generateClientKey')}</span>
+                  </button>
+                  <button
+                    onClick={() => setShowGenerateModal(true)}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>{i18n.t('dashboard.generateServerKey')}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'settings' && (
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow p-6">
@@ -450,6 +629,35 @@ const Admin: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* Modals */}
+      {showImportModal && (
+        <ImportKeyModal
+          onClose={() => setShowImportModal(false)}
+          onSuccess={() => {
+            setShowImportModal(false);
+            loadKeys();
+          }}
+        />
+      )}
+      {showGenerateModal && (
+        <GenerateKeyModal
+          onClose={() => setShowGenerateModal(false)}
+          onSuccess={() => {
+            setShowGenerateModal(false);
+            loadKeys();
+          }}
+        />
+      )}
+      {showClientGenerateModal && (
+        <ClientGenerateKeyModal
+          onClose={() => setShowClientGenerateModal(false)}
+          onSuccess={() => {
+            setShowClientGenerateModal(false);
+            loadKeys();
+          }}
+        />
+      )}
     </div>
   );
 };

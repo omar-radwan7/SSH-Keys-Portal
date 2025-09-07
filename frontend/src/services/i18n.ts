@@ -100,6 +100,10 @@ interface TranslationStrings {
   'admin.managedHosts': string;
   'admin.activeUsers': string;
   'admin.sshKeys': string;
+  'admin.sshKeysDescription': string;
+  'admin.keyManagement': string;
+  'admin.keyManagementDescription': string;
+  'admin.backToHosts': string;
   'admin.total': string;
   'admin.new': string;
   'admin.inactive': string;
@@ -322,6 +326,10 @@ const translations: Record<Language, TranslationStrings> = {
     'admin.managedHosts': 'Managed Hosts',
     'admin.activeUsers': 'Active Users',
     'admin.sshKeys': 'SSH Keys',
+    'admin.sshKeysDescription': 'Manage and generate SSH keys for your hosts.',
+    'admin.keyManagement': 'Key Management',
+    'admin.keyManagementDescription': 'Import, generate, and revoke SSH keys.',
+    'admin.backToHosts': 'Back to Hosts',
     'admin.total': 'Total',
     'admin.new': 'New',
     'admin.inactive': 'Inactive',
@@ -543,6 +551,10 @@ const translations: Record<Language, TranslationStrings> = {
     'admin.managedHosts': 'الخوادم المُدارة',
     'admin.activeUsers': 'المستخدمون النشطون',
     'admin.sshKeys': 'مفاتيح SSH',
+    'admin.sshKeysDescription': 'إدارة وإنشاء مفاتيح SSH للمضيفات.',
+    'admin.keyManagement': 'إدارة المفاتيح',
+    'admin.keyManagementDescription': 'استيراد وإنشاء وإلغاء مفاتيح SSH.',
+    'admin.backToHosts': 'العودة للمضيفات',
     'admin.total': 'إجمالي',
     'admin.new': 'جديد',
     'admin.inactive': 'غير نشط',
