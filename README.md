@@ -173,8 +173,6 @@ The SQLite database is automatically managed:
 - `policies` - Security policies and rules
 - `audit_events` - Complete audit log
 - `system_gen_requests` - Server-generated key requests
-- `apply_queue` - Background deployment queue
-- `notification_queue` - System notifications
 
 **Database Migrations**: Automatically applied on startup
 
