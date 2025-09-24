@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "setup": "npm run setup:detect-platform",
-    "setup:detect-platform": "node -e \"const os=require('os'); const platform=os.platform(); if(platform==='win32'){console.log('Windows detected. Options:'); console.log('1. Auto-install make: choco install make -y (then: make auto-setup)'); console.log('2. Use batch script: setup-windows.bat auto-setup'); console.log('3. Use PowerShell: setup.ps1 auto-setup')}else{console.log('Unix detected. Options:'); console.log('1. With make: make auto-setup'); console.log('2. Install make: sudo apt install build-essential (Ubuntu) or brew install make (macOS)')}\"",
+    "setup:detect-platform": "node -e \"const os=require('os'); const platform=os.platform(); if(platform==='win32'){console.log('Windows detected. Options:'); console.log('1. Auto-install make: choco install make -y (then: make auto-setup)'); console.log('2. Use batch script: setup-windows.bat auto-setup')}else{console.log('Unix detected. Options:'); console.log('1. With make: make auto-setup'); console.log('2. Install make: sudo apt install build-essential (Ubuntu) or brew install make (macOS)')}\"",
     "setup:windows": "setup-windows.bat auto-setup",
     "setup:unix": "make auto-setup",
     "install:all": "cd frontend && npm install --legacy-peer-deps && cd ../backend-py && python3 -m pip install -r requirements.txt",

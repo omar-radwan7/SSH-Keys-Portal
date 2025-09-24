@@ -51,8 +51,8 @@ help: ## Show this help message
 	@echo ""
 ifeq ($(DETECTED_OS),Windows)
 	@echo "💡 Windows Users (if make not installed):"
-	@echo "  npm run setup        - Shows all setup options"
-	@echo "  setup-windows.bat    - Direct Windows setup"
+	@echo "  npm run setup           - Shows setup options"
+	@echo "  setup-windows.bat       - Direct Windows setup"
 endif
 	@echo ""
 	@echo "📖 For detailed help: make info"
