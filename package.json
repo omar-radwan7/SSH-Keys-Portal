@@ -4,13 +4,21 @@
   "description": "Secure portal for managing SSH keys used to access HPC systems",
   "main": "dist/server.js",
   "scripts": {
+    "setup": "npm run setup:detect-platform",
+    "setup:detect-platform": "node -e \"const os=require('os'); const platform=os.platform(); if(platform==='win32'){console.log('Windows detected. Options:'); console.log('1. Auto-install make: choco install make -y (then: make auto-setup)'); console.log('2. Use batch script: setup-windows.bat auto-setup'); console.log('3. Use PowerShell: setup.ps1 auto-setup')}else{console.log('Unix detected. Options:'); console.log('1. With make: make auto-setup'); console.log('2. Install make: sudo apt install build-essential (Ubuntu) or brew install make (macOS)')}\"",
+    "setup:windows": "setup-windows.bat auto-setup",
+    "setup:unix": "make auto-setup",
+    "install:all": "cd frontend && npm install --legacy-peer-deps && cd ../backend-py && python3 -m pip install -r requirements.txt",
+    "install:windows": "cd frontend && npm install && cd ../backend-py && python -m pip install -r requirements-windows.txt",
     "build": "npm run build:frontend",
     "build:frontend": "cd frontend && npm run build",
     "start": "cd backend-py && python3 -m uvicorn app.main:app --host 0.0.0.0 --port 3000",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd backend-py && python3 -m uvicorn app.main:app --host 0.0.0.0 --port 3000 --reload",
     "dev:frontend": "cd frontend && npm start",
-    "install:all": "cd frontend && npm install --legacy-peer-deps && cd ../backend-py && python3 -m pip install --break-system-packages -r requirements.txt"
+    "test": "echo 'Running tests...' && cd backend-py && python -m pytest tests/ -v && cd ../frontend && npm test",
+    "clean": "echo 'Cleaning...' && rimraf backend-py/__pycache__ backend-py/**/__pycache__ frontend/node_modules/.cache",
+    "help": "echo 'Available commands: npm run setup (shows all options), npm run dev, npm run build, npm run test, npm run clean'"
   },
   "dependencies": {
     "express": "^4.18.2",

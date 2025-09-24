@@ -44,17 +44,39 @@ goto end
 
 :check_python
 echo Checking Python installation...
+REM Try different Python commands
 python --version >nul 2>&1
-if errorlevel 1 (
-    echo ERROR: Python not found!
-    echo Please install Python 3.11+ from https://python.org
-    echo Make sure to check "Add Python to PATH" during installation
-    exit /b 1
-) else (
+if not errorlevel 1 (
     python --version
     echo Python found!
+    goto :eof
 )
-goto :eof
+
+python3 --version >nul 2>&1
+if not errorlevel 1 (
+    python3 --version
+    echo Python3 found!
+    REM Create alias for python command
+    doskey python=python3 $*
+    goto :eof
+)
+
+py --version >nul 2>&1
+if not errorlevel 1 (
+    py --version
+    echo Python launcher found!
+    REM Create alias for python command
+    doskey python=py $*
+    goto :eof
+)
+
+echo ERROR: Python not found!
+echo Please install Python 3.11+ from https://python.org
+echo Make sure to check "Add Python to PATH" during installation
+echo.
+echo Alternative: Try running this script as Administrator
+echo or manually add Python to your PATH environment variable
+exit /b 1
 
 :check_node
 echo Checking Node.js installation...
@@ -90,14 +112,48 @@ echo ==========================
 REM Backend setup
 echo Setting up Python backend...
 cd backend-py
+
+REM Determine which Python command to use
+set PYTHON_CMD=python
+python --version >nul 2>&1
+if errorlevel 1 (
+    python3 --version >nul 2>&1
+    if not errorlevel 1 (
+        set PYTHON_CMD=python3
+    ) else (
+        py --version >nul 2>&1
+        if not errorlevel 1 (
+            set PYTHON_CMD=py
+        )
+    )
+)
+
 if not exist venv (
     echo Creating Python virtual environment...
-    python -m venv venv
+    %PYTHON_CMD% -m venv venv
+    if errorlevel 1 (
+        echo ERROR: Failed to create virtual environment
+        echo Please ensure Python is properly installed and in PATH
+        cd ..
+        exit /b 1
+    )
 )
+
 echo Activating virtual environment and installing dependencies...
-call venv\Scripts\activate.bat
-python -m pip install --upgrade pip
-pip install -r requirements.txt
+if exist venv\Scripts\activate.bat (
+    call venv\Scripts\activate.bat
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+    if errorlevel 1 (
+        echo ERROR: Failed to install Python dependencies
+        cd ..
+        exit /b 1
+    )
+) else (
+    echo ERROR: Virtual environment activation script not found
+    cd ..
+    exit /b 1
+)
 cd ..
 
 REM Frontend setup
@@ -105,10 +161,15 @@ echo Setting up Node.js frontend...
 cd frontend
 echo Installing npm dependencies...
 npm install
+if errorlevel 1 (
+    echo ERROR: Failed to install Node.js dependencies
+    cd ..
+    exit /b 1
+)
 cd ..
 
 echo Dependencies installed successfully!
-goto end
+goto :eof
 
 :dev
 echo Starting development servers...
@@ -126,8 +187,13 @@ goto end
 :dev_backend
 echo Starting backend server...
 cd backend-py
-call venv\Scripts\activate.bat
-python run.py
+if exist venv\Scripts\activate.bat (
+    call venv\Scripts\activate.bat
+    python run.py
+) else (
+    echo ERROR: Virtual environment not found. Please run 'setup.bat install' first
+    exit /b 1
+)
 goto end
 
 :dev_frontend
@@ -143,8 +209,14 @@ echo ================
 REM Backend tests
 echo Running backend tests...
 cd backend-py
-call venv\Scripts\activate.bat
-python -m pytest tests/ -v
+if exist venv\Scripts\activate.bat (
+    call venv\Scripts\activate.bat
+    python -m pytest tests/ -v
+) else (
+    echo ERROR: Virtual environment not found. Please run 'setup.bat install' first
+    cd ..
+    exit /b 1
+)
 cd ..
 
 REM Frontend tests

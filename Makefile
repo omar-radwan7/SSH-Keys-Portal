@@ -1,13 +1,61 @@
-# SSH Keys Portal - Makefile Automation
-# ==================================
+# SSH Keys Portal - Cross-Platform Makefile
+# ==========================================
+# Works on Windows (with make), macOS, and Linux
 
-.PHONY: help install setup dev clean test lint format build deploy docker status logs backup
+.PHONY: help install setup dev clean test lint format build deploy docker status logs backup windows-setup
+
+# Detect OS for cross-platform compatibility
+ifeq ($(OS),Windows_NT)
+    DETECTED_OS := Windows
+    PYTHON := python
+    PIP := pip
+    VENV_ACTIVATE := venv\Scripts\activate.bat
+    VENV_PYTHON := venv\Scripts\python.exe
+    SHELL := cmd
+    RM := del /f /q
+    RMDIR := rmdir /s /q
+    MKDIR := mkdir
+    SEP := \\
+    REQUIREMENTS := requirements-windows.txt
+else
+    DETECTED_OS := $(shell uname -s)
+    PYTHON := python3
+    PIP := pip3
+    VENV_ACTIVATE := venv/bin/activate
+    VENV_PYTHON := venv/bin/python
+    RM := rm -f
+    RMDIR := rm -rf
+    MKDIR := mkdir -p
+    SEP := /
+    REQUIREMENTS := requirements.txt
+endif
 
 # Default target
 help: ## Show this help message
-	@echo "SSH Keys Portal - Available Commands:"
-	@echo "======================================"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@echo "SSH Keys Portal - Available Commands ($(DETECTED_OS)):"
+	@echo "=================================================="
+	@echo ""
+	@echo "🚀 Quick Start:"
+	@echo "  make auto-setup    - Full automated setup"
+	@echo "  make dev           - Start development servers"
+	@echo ""
+	@echo "📦 Setup Commands:"
+	@echo "  make install       - Install dependencies"
+	@echo "  make setup         - Complete setup with database"
+	@echo ""
+	@echo "🔧 Development:"
+	@echo "  make dev-backend   - Start backend only"
+	@echo "  make dev-frontend  - Start frontend only"
+	@echo "  make test          - Run tests"
+	@echo "  make clean         - Clean temporary files"
+	@echo ""
+ifeq ($(DETECTED_OS),Windows)
+	@echo "💡 Windows Users (if make not installed):"
+	@echo "  npm run setup        - Shows all setup options"
+	@echo "  setup-windows.bat    - Direct Windows setup"
+endif
+	@echo ""
+	@echo "📖 For detailed help: make info"
 
 # =============================================================================
 # AUTOMATIC ENVIRONMENT SETUP
@@ -20,27 +68,21 @@ check-system: ## Check and install system dependencies
 	@$(MAKE) check-git
 	@echo "✅ System check complete!"
 
-check-python: ## Check and install Python
+check-python: ## Check Python installation (cross-platform)
 	@echo "🐍 Checking Python installation..."
-	@if ! command -v python3 >/dev/null 2>&1; then \
-		echo "❌ Python3 not found. Installing..."; \
-		if command -v apt-get >/dev/null 2>&1; then \
-			sudo apt-get update && sudo apt-get install -y python3 python3-pip python3-venv; \
-		elif command -v yum >/dev/null 2>&1; then \
-			sudo yum install -y python3 python3-pip; \
-		elif command -v brew >/dev/null 2>&1; then \
-			brew install python3; \
-		else \
-			echo "⚠️  Please install Python3 manually from https://python.org"; \
-			exit 1; \
-		fi; \
-	else \
-		echo "✅ Python3 found: $$(python3 --version)"; \
-	fi
-	@if ! command -v pip3 >/dev/null 2>&1; then \
-		echo "Installing pip3..."; \
-		curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python3 get-pip.py && rm get-pip.py; \
-	fi
+ifeq ($(DETECTED_OS),Windows)
+	@python --version >nul 2>&1 && echo "✅ Python found: $$(python --version)" || \
+	(python3 --version >nul 2>&1 && echo "✅ Python3 found: $$(python3 --version)" || \
+	(py --version >nul 2>&1 && echo "✅ Python launcher found: $$(py --version)" || \
+	(echo "❌ Python not found! Install from https://python.org" && echo "⚠️  Make sure to check 'Add Python to PATH'" && exit 1)))
+else
+	@command -v python3 >/dev/null 2>&1 && echo "✅ Python3 found: $$(python3 --version)" || \
+	(echo "❌ Python3 not found. Installing..." && \
+	(command -v apt-get >/dev/null 2>&1 && sudo apt-get update && sudo apt-get install -y python3 python3-pip python3-venv) || \
+	(command -v yum >/dev/null 2>&1 && sudo yum install -y python3 python3-pip) || \
+	(command -v brew >/dev/null 2>&1 && brew install python3) || \
+	(echo "⚠️  Please install Python3 manually from https://python.org" && exit 1))
+endif
 
 check-node: ## Check and install Node.js
 	@echo "⚛️  Checking Node.js installation..."
@@ -98,27 +140,52 @@ install: check-system ## Install all dependencies (backend + frontend)
 
 setup-venv: ## Create Python virtual environment
 	@echo "🐍 Setting up Python virtual environment..."
+ifeq ($(DETECTED_OS),Windows)
+	@if not exist "backend-py\venv" ( \
+		cd backend-py && $(PYTHON) -m venv venv && \
+		echo "✅ Virtual environment created" \
+	) else ( \
+		echo "✅ Virtual environment already exists" \
+	)
+else
 	@if [ ! -d "backend-py/venv" ]; then \
-		cd backend-py && python3 -m venv venv; \
+		cd backend-py && $(PYTHON) -m venv venv; \
 		echo "✅ Virtual environment created"; \
 	else \
 		echo "✅ Virtual environment already exists"; \
 	fi
+endif
 
 install-backend: ## Install Python backend dependencies
 	@echo "🐍 Installing backend dependencies..."
+ifeq ($(DETECTED_OS),Windows)
+	@cd backend-py && ( \
+		if exist venv\Scripts\activate.bat ( \
+			call venv\Scripts\activate.bat && \
+			python -m pip install --upgrade pip && \
+			pip install -r $(REQUIREMENTS) \
+		) else ( \
+			echo "❌ Virtual environment not found. Creating it first..." && \
+			$(PYTHON) -m venv venv && \
+			call venv\Scripts\activate.bat && \
+			python -m pip install --upgrade pip && \
+			pip install -r $(REQUIREMENTS) \
+		) \
+	)
+else
 	@cd backend-py && \
 		if [ -d "venv" ]; then \
 			. venv/bin/activate && \
 			python -m pip install --upgrade pip && \
-			pip install -r requirements.txt; \
+			pip install -r $(REQUIREMENTS); \
 		else \
 			echo "❌ Virtual environment not found. Creating it first..."; \
-			python3 -m venv venv && \
+			$(PYTHON) -m venv venv && \
 			. venv/bin/activate && \
 			python -m pip install --upgrade pip && \
-			pip install -r requirements.txt; \
+			pip install -r $(REQUIREMENTS); \
 		fi
+endif
 	@echo "✅ Backend dependencies installed"
 
 install-frontend: ## Install Node.js frontend dependencies
@@ -402,4 +469,48 @@ info: ## Show project information
 	@echo "  ✅ No manual dependency installation needed!"
 
 first-time: auto-setup ## First time setup for new users (alias for auto-setup)
-	@echo "✅ First-time setup complete!" 
+	@echo "✅ First-time setup complete!"
+
+# =============================================================================
+# WINDOWS SPECIFIC HELPERS
+# =============================================================================
+
+windows-setup: ## Setup make on Windows (install instructions)
+	@echo "🪟 Windows Make Installation Guide:"
+	@echo "==================================="
+	@echo ""
+	@echo "Auto-Install Options:"
+	@echo "  1. Chocolatey: choco install make -y"
+	@echo "  2. Scoop: scoop install make"
+	@echo "  3. winget: winget install GnuWin32.Make"
+	@echo ""
+	@echo "Manual Options:"
+	@echo "  1. Download Git Bash: https://git-scm.com/download/win"
+	@echo "  2. Use WSL: wsl --install"
+	@echo ""
+	@echo "No-Make Fallbacks:"
+	@echo "  1. Windows: setup-windows.bat auto-setup"
+	@echo "  2. PowerShell: setup.ps1 auto-setup"
+	@echo "  3. npm: npm run setup (if available)"
+	@echo ""
+
+install-make-windows: ## Auto-install make on Windows
+ifeq ($(DETECTED_OS),Windows)
+	@echo "🔧 Auto-installing make for Windows..."
+	@powershell -Command "if (Get-Command choco -ErrorAction SilentlyContinue) { choco install make -y } elseif (Get-Command scoop -ErrorAction SilentlyContinue) { scoop install make } elseif (Get-Command winget -ErrorAction SilentlyContinue) { winget install GnuWin32.Make } else { echo 'Please install Chocolatey, Scoop, or winget first' }"
+	@echo "✅ Make installation attempted. Please restart your terminal."
+else
+	@echo "This command is only for Windows systems"
+endif
+
+windows-check: ## Check if Windows environment is ready for make
+ifeq ($(DETECTED_OS),Windows)
+	@echo "🪟 Windows Environment Check:"
+	@echo "============================="
+	@where make >nul 2>&1 && echo "✅ Make is available" || echo "❌ Make not found - run 'make windows-setup'"
+	@python --version >nul 2>&1 && echo "✅ Python found" || echo "❌ Python not found"
+	@node --version >nul 2>&1 && echo "✅ Node.js found" || echo "❌ Node.js not found"
+	@git --version >nul 2>&1 && echo "✅ Git found" || echo "❌ Git not found"
+else
+	@echo "This command is only for Windows systems"
+endif 

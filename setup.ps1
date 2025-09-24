@@ -33,18 +33,43 @@ function Show-Help {
 
 function Test-Python {
     Write-Host "Checking Python installation..." -ForegroundColor Yellow
-    try {
-        $pythonVersion = python --version 2>$null
-        if ($pythonVersion) {
-            Write-Host "✅ $pythonVersion" -ForegroundColor Green
-            return $true
+    
+    # Try different Python commands
+    $pythonCommands = @("python", "python3", "py")
+    
+    foreach ($cmd in $pythonCommands) {
+        try {
+            $pythonVersion = & $cmd --version 2>$null
+            if ($pythonVersion) {
+                Write-Host "✅ $pythonVersion (using '$cmd')" -ForegroundColor Green
+                $global:PythonCommand = $cmd
+                return $true
+            }
+        } catch {
+            # Continue to next command
         }
-    } catch {
-        Write-Host "❌ Python not found!" -ForegroundColor Red
-        Write-Host "Please install Python 3.11+ from https://python.org" -ForegroundColor Red
-        Write-Host "Make sure to check 'Add Python to PATH' during installation" -ForegroundColor Red
-        return $false
     }
+    
+    # Check if Python is installed but not in PATH
+    $pythonPaths = @(
+        "$env:LOCALAPPDATA\Programs\Python\Python*\python.exe",
+        "$env:PROGRAMFILES\Python*\python.exe",
+        "$env:PROGRAMFILES(x86)\Python*\python.exe"
+    )
+    
+    foreach ($path in $pythonPaths) {
+        $foundPython = Get-ChildItem -Path $path -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($foundPython) {
+            Write-Host "⚠️  Python found at: $($foundPython.FullName)" -ForegroundColor Yellow
+            Write-Host "❌ But Python is not in your PATH!" -ForegroundColor Red
+            Write-Host "Please add Python to your PATH or reinstall with 'Add to PATH' option" -ForegroundColor Red
+            return $false
+        }
+    }
+    
+    Write-Host "❌ Python not found!" -ForegroundColor Red
+    Write-Host "Please install Python 3.11+ from https://python.org" -ForegroundColor Red
+    Write-Host "Make sure to check 'Add Python to PATH' during installation" -ForegroundColor Red
     return $false
 }
 
@@ -86,26 +111,70 @@ function Install-Dependencies {
     Write-Host "Installing dependencies..." -ForegroundColor Cyan
     Write-Host "==========================" -ForegroundColor Cyan
     
+    # Use detected Python command or default to 'python'
+    if (-not $global:PythonCommand) {
+        $global:PythonCommand = "python"
+    }
+    
     # Backend setup
     Write-Host "Setting up Python backend..." -ForegroundColor Yellow
     Set-Location backend-py
     
     if (-not (Test-Path "venv")) {
         Write-Host "Creating Python virtual environment..." -ForegroundColor Yellow
-        python -m venv venv
+        try {
+            & $global:PythonCommand -m venv venv
+            if ($LASTEXITCODE -ne 0) {
+                throw "Failed to create virtual environment"
+            }
+        } catch {
+            Write-Host "❌ Failed to create virtual environment" -ForegroundColor Red
+            Write-Host "Error: $_" -ForegroundColor Red
+            Set-Location ..
+            exit 1
+        }
     }
     
     Write-Host "Activating virtual environment and installing dependencies..." -ForegroundColor Yellow
-    & "venv\Scripts\Activate.ps1"
-    python -m pip install --upgrade pip
-    pip install -r requirements.txt
+    try {
+        if (Test-Path "venv\Scripts\Activate.ps1") {
+            & "venv\Scripts\Activate.ps1"
+        } else {
+            throw "Virtual environment activation script not found"
+        }
+        
+        python -m pip install --upgrade pip
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to upgrade pip"
+        }
+        
+        pip install -r requirements.txt
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to install Python dependencies"
+        }
+    } catch {
+        Write-Host "❌ Failed to install Python dependencies" -ForegroundColor Red
+        Write-Host "Error: $_" -ForegroundColor Red
+        Set-Location ..
+        exit 1
+    }
     Set-Location ..
     
     # Frontend setup
     Write-Host "Setting up Node.js frontend..." -ForegroundColor Yellow
     Set-Location frontend
     Write-Host "Installing npm dependencies..." -ForegroundColor Yellow
-    npm install
+    try {
+        npm install
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to install npm dependencies"
+        }
+    } catch {
+        Write-Host "❌ Failed to install Node.js dependencies" -ForegroundColor Red
+        Write-Host "Error: $_" -ForegroundColor Red
+        Set-Location ..
+        exit 1
+    }
     Set-Location ..
     
     Write-Host "✅ Dependencies installed successfully!" -ForegroundColor Green
