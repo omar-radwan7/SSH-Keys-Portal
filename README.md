@@ -4,7 +4,9 @@ A comprehensive web-based portal for managing SSH keys across HPC (High Performa
 
 ## Zero-Dependency Quick Start
 
-No manual installations required! The Makefile automatically handles everything:
+No manual installations required! Choose your platform:
+
+### Linux/macOS (using Makefile)
 
 ```bash
 # Clone the repository
@@ -16,6 +18,34 @@ make auto-setup
 
 # Start development servers
 make dev
+```
+
+### Windows (using PowerShell)
+
+```powershell
+# Clone the repository
+git clone https://github.com/omar-radwan7/SSH-Keys-Portal.git
+cd SSH-Keys-Portal
+
+# ONE COMMAND SETUP - Installs everything automatically!
+.\setup.ps1 auto-setup
+
+# Start development servers
+.\setup.ps1 dev
+```
+
+### Windows (using Command Prompt)
+
+```cmd
+# Clone the repository
+git clone https://github.com/omar-radwan7/SSH-Keys-Portal.git
+cd SSH-Keys-Portal
+
+# ONE COMMAND SETUP - Installs everything automatically!
+setup.bat auto-setup
+
+# Start development servers
+setup.bat dev
 ```
 
 That's it! Access your application at:
@@ -35,8 +65,9 @@ That's it! Access your application at:
 - Initializes database
 - Ready to run!
 
-### Common Make Commands
+### Common Commands
 
+**Linux/macOS:**
 ```bash
 make dev          # Start both servers
 make stop         # Stop all servers  
@@ -45,6 +76,26 @@ make test         # Run all tests
 make status       # Check service status
 make clean        # Clean temporary files
 make help         # Show all available commands
+```
+
+**Windows PowerShell:**
+```powershell
+.\setup.ps1 dev           # Start both servers
+.\setup.ps1 dev-backend   # Start backend only
+.\setup.ps1 dev-frontend  # Start frontend only
+.\setup.ps1 test          # Run all tests
+.\setup.ps1 clean         # Clean temporary files
+.\setup.ps1 help          # Show all available commands
+```
+
+**Windows Command Prompt:**
+```cmd
+setup.bat dev           # Start both servers
+setup.bat dev-backend   # Start backend only
+setup.bat dev-frontend  # Start frontend only
+setup.bat test          # Run all tests
+setup.bat clean         # Clean temporary files
+setup.bat help          # Show all available commands
 ```
 
 ## Features

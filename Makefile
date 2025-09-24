@@ -108,9 +108,17 @@ setup-venv: ## Create Python virtual environment
 install-backend: ## Install Python backend dependencies
 	@echo "🐍 Installing backend dependencies..."
 	@cd backend-py && \
-		. venv/bin/activate && \
-		python -m pip install --upgrade pip && \
-		pip install -r requirements.txt
+		if [ -d "venv" ]; then \
+			. venv/bin/activate && \
+			python -m pip install --upgrade pip && \
+			pip install -r requirements.txt; \
+		else \
+			echo "❌ Virtual environment not found. Creating it first..."; \
+			python3 -m venv venv && \
+			. venv/bin/activate && \
+			python -m pip install --upgrade pip && \
+			pip install -r requirements.txt; \
+		fi
 	@echo "✅ Backend dependencies installed"
 
 install-frontend: ## Install Node.js frontend dependencies
