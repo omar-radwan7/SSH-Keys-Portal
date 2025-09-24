@@ -2,6 +2,51 @@
 
 A comprehensive web-based portal for managing SSH keys across HPC (High Performance Computing) environments. This system provides centralized SSH key management, automated deployment, user administration, and comprehensive auditing capabilities.
 
+## Zero-Dependency Quick Start
+
+No manual installations required! The Makefile automatically handles everything:
+
+```bash
+# Clone the repository
+git clone https://github.com/omar-radwan7/SSH-Keys-Portal.git
+cd SSH-Keys-Portal
+
+# ONE COMMAND SETUP - Installs everything automatically!
+make auto-setup
+
+# Start development servers
+make dev
+```
+
+That's it! Access your application at:
+- **Frontend**: http://localhost:3001
+- **Backend API**: http://localhost:3000
+- **API Docs**: http://localhost:3000/docs
+
+### What make auto-setup Does Automatically
+
+- Detects your OS (Linux, macOS, Windows WSL)
+- Installs Python3 (if not present)
+- Installs Node.js & npm (if not present)
+- Installs Git (if not present)
+- Creates Python virtual environment
+- Installs all Python dependencies
+- Installs all Node.js dependencies
+- Initializes database
+- Ready to run!
+
+### Common Make Commands
+
+```bash
+make dev          # Start both servers
+make stop         # Stop all servers  
+make restart      # Restart servers
+make test         # Run all tests
+make status       # Check service status
+make clean        # Clean temporary files
+make help         # Show all available commands
+```
+
 ## Features
 
 ### Core Functionality
@@ -73,25 +118,53 @@ The application supports two database systems:
 
 ## Requirements
 
-### System Requirements
+### Automated Setup (Recommended)
+
+No manual installations needed! The Makefile handles everything automatically:
+- **Operating System**: Linux, macOS, or Windows WSL
+- **Dependencies**: Automatically installed (Python3, Node.js, Git, pip, npm)
+- **Database**: SQLite (auto-created) or PostgreSQL (for production)
+
+### Manual Setup Requirements (Advanced)
+
+If you prefer manual installation:
 - **Python**: 3.11 or higher
 - **Node.js**: 18 or higher
 - **Database**: PostgreSQL 14+ (production) or SQLite (development)
 - **Operating System**: Linux, macOS, or Windows
 
 ### Network Requirements
+
 - Portal server to LDAP/AD server (ports 389/636) - if using LDAP authentication
 - Portal server to managed HPC nodes (port 22) - for SSH key deployment
 - Users to portal web interface (ports 3000/3001)
 
 ## Installation and Setup
 
-### Quick Start (Development)
+### Recommended: Automated Setup (Zero Dependencies)
+
+Use the automated Makefile setup above for the easiest experience!
+
+Simply run:
+```bash
+make auto-setup  # Installs everything automatically
+make dev         # Start development servers
+```
+
+### Manual Setup (Advanced Users)
+
+<details>
+<summary>Click to expand manual installation instructions</summary>
+
+#### System Requirements
+- **Python**: 3.11 or higher
+- **Node.js**: 18 or higher  
+- **Database**: PostgreSQL 14+ (production) or SQLite (development)
 
 #### 1. Clone the Repository
 ```bash
-git clone <repository-url>
-cd "SSH keys portal"
+git clone https://github.com/omar-radwan7/SSH-Keys-Portal.git
+cd SSH-Keys-Portal
 ```
 
 #### 2. Backend Setup
@@ -126,8 +199,6 @@ EOF
 python -m uvicorn app.main:app --host 0.0.0.0 --port 3000 --reload
 ```
 
-The SQLite database will be automatically created at `backend-py/hpc_ssh_portal.db` when the application starts.
-
 #### 3. Frontend Setup
 Open a new terminal:
 ```bash
@@ -156,6 +227,8 @@ npm start
 #### 5. Default Credentials (Development)
 - **Admin**: admin / admin
 - **Test User**: Available via test login (if enabled)
+
+</details>
 
 ## Database Setup Details
 
@@ -494,13 +567,96 @@ The backend provides comprehensive API documentation via FastAPI's automatic doc
 - **ReDoc**: http://localhost:3000/redoc
 - **OpenAPI Schema**: http://localhost:3000/openapi.json
 
+## Makefile Automation
+
+The project includes comprehensive Makefile automation for all common tasks:
+
+### Development Commands
+
+```bash
+make dev              # Start both backend and frontend
+make dev-backend      # Start only backend server
+make dev-frontend     # Start only frontend server
+make stop             # Stop all development servers
+make restart          # Restart development servers
+```
+
+### Setup and Installation
+
+```bash
+make auto-setup       # Full automated setup (installs everything)
+make install          # Install dependencies only
+make setup-venv       # Create Python virtual environment
+make check-system     # Check and install system dependencies
+```
+
+### Testing and Quality
+
+```bash
+make test             # Run all tests
+make test-backend     # Run backend tests only
+make test-frontend    # Run frontend tests only
+make lint             # Run code linting
+make format           # Format all code
+```
+
+### Database Operations
+
+```bash
+make db-migrate       # Run database migrations
+make db-backup        # Create database backup
+make db-reset         # Reset database (WARNING: DESTRUCTIVE)
+```
+
+### Docker Support
+
+```bash
+make docker-build     # Build Docker images
+make docker-up        # Start with Docker Compose
+make docker-down      # Stop Docker services
+```
+
+### Monitoring and Utilities
+
+```bash
+make status           # Check service status
+make health-check     # Comprehensive health check
+make clean            # Clean temporary files
+make backup           # Create full project backup
+make update           # Update all dependencies
+make help             # Show all available commands
+```
+
 ## Contributing
 
+Contributing is now easier than ever!
+
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Clone and setup:
+   ```bash
+   git clone <your-fork>
+   cd SSH-Keys-Portal
+   make auto-setup
+   ```
+3. Create a feature branch:
+   ```bash
+   git checkout -b feature/amazing-feature
+   ```
+4. Make your changes and test:
+   ```bash
+   make test
+   ```
+5. Commit your changes:
+   ```bash
+   git commit -m 'Add some amazing feature'
+   ```
+6. Push to the branch:
+   ```bash
+   git push origin feature/amazing-feature
+   ```
+7. Open a Pull Request
+
+No manual dependency installation needed - the Makefile handles everything!
 
 ## License
 
