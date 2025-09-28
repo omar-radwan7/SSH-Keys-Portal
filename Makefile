@@ -55,11 +55,11 @@ help: ## Show this help message
 dev: stop ## Start both backend and frontend in development mode
 	@echo "🔥 Starting development servers on $(DETECTED_OS)..."
 ifeq ($(DETECTED_OS),Windows)
-	@cmd /c "cd backend-py && venv\Scripts\activate && start /B python run.py > ..\backend.log 2>&1"
-	@cmd /c "cd frontend && start /B npm start > ..\frontend.log 2>&1"
+	@powershell -NoProfile -Command "Start-Process -FilePath 'cmd.exe' -ArgumentList '/c','cd backend-py && venv\\Scripts\\activate && python run.py >> ..\\backend.log 2>&1' -WindowStyle Hidden"
+	@powershell -NoProfile -Command "Start-Process -FilePath 'cmd.exe' -ArgumentList '/c','cd frontend && set PORT=3001 && set BROWSER=none && npm start >> ..\\frontend.log 2>&1' -WindowStyle Hidden"
 else
 	@cd backend-py && . venv/bin/activate && nohup python run.py > ../backend.log 2>&1 & echo $$! > ../backend.pid
-	@cd frontend && nohup npm start > ../frontend.log 2>&1 & echo $$! > ../frontend.pid
+	@cd frontend && PORT=3001 nohup npm start > ../frontend.log 2>&1 & echo $$! > ../frontend.pid
 endif
 	@echo "✅ Development servers started!"
 	@echo "🐍 Backend:  http://localhost:3000"
@@ -70,8 +70,8 @@ stop: ## Stop all development servers
 ifeq ($(DETECTED_OS),Windows)
 	@-taskkill /F /IM python.exe /T 2>nul || echo "No Python processes found"
 	@-taskkill /F /IM node.exe /T 2>nul || echo "No Node processes found"
-	@-for /f "tokens=5" %a in ('netstat -ano ^| findstr :3000') do taskkill /F /PID %a 2>nul || echo ""
-	@-for /f "tokens=5" %a in ('netstat -ano ^| findstr :3001') do taskkill /F /PID %a 2>nul || echo ""
+	@-cmd /c for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3000') do taskkill /F /PID %%a 2>nul
+	@-cmd /c for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3001') do taskkill /F /PID %%a 2>nul
 else
 	@-if [ -f backend.pid ]; then kill -9 $$(cat backend.pid) 2>/dev/null || true; rm -f backend.pid; fi
 	@-if [ -f frontend.pid ]; then kill -9 $$(cat frontend.pid) 2>/dev/null || true; rm -f frontend.pid; fi
@@ -84,8 +84,8 @@ status: ## Check service status
 	@echo "📊 Service Status on $(DETECTED_OS):"
 	@echo "============================"
 ifeq ($(DETECTED_OS),Windows)
-	@echo | set /p="Backend (port 3000): " && curl -s http://localhost:3000/health >nul 2>&1 && echo ✅ Running || echo ❌ Down
-	@echo | set /p="Frontend (port 3001): " && curl -s http://localhost:3001 >nul 2>&1 && echo ✅ Running || echo ❌ Down
+	@powershell -NoProfile -Command "Write-Host 'Backend (port 3000): ' -NoNewline; try { $resp = Invoke-WebRequest -UseBasicParsing 'http://localhost:3000/health' -TimeoutSec 2; if ($resp.StatusCode -eq 200) { Write-Host '✅ Running' } else { Write-Host '❌ Down' } } catch { Write-Host '❌ Down' }"
+	@powershell -NoProfile -Command "Write-Host 'Frontend (port 3001): ' -NoNewline; try { $resp = Invoke-WebRequest -UseBasicParsing 'http://localhost:3001' -TimeoutSec 2; if ($resp.StatusCode -eq 200) { Write-Host '✅ Running' } else { Write-Host '❌ Down' } } catch { Write-Host '❌ Down' }"
 else
 	@printf "Backend (port 3000): " && curl -s http://localhost:3000/health >/dev/null 2>&1 && echo "✅ Running" || echo "❌ Down"
 	@printf "Frontend (port 3001): " && curl -s http://localhost:3001 >/dev/null 2>&1 && echo "✅ Running" || echo "❌ Down"
