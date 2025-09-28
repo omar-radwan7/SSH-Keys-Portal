@@ -225,8 +225,8 @@ setup-db: ## Initialize database with migrations
 
 dev: ## Start both backend and frontend in development mode
 	@echo "🔥 Starting development servers..."
-	$(MAKE) dev-backend &
-	$(MAKE) dev-frontend &
+	/usr/bin/make dev-backend &
+	/usr/bin/make dev-frontend &
 	@echo "✅ Development servers started!"
 	@echo "   Backend:  http://localhost:3000"
 	@echo "   Frontend: http://localhost:3001"
