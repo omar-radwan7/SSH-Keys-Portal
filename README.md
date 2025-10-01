@@ -52,69 +52,7 @@ HPC environments span many nodes and users. Manual SSH key distribution is error
 ## Zero-Dependency Quick Start
 
 Works without installing Node, Python, or PostgreSQL manually.  
-
-### Linux and macOS
-```bash
-git clone https://github.com/your-org/hpc-ssh-keys-portal.git
-cd hpc-ssh-keys-portal
-make setup
-make run
-Windows (PowerShell)
-powershell
-Copy code
-git clone https://github.com/your-org/hpc-ssh-keys-portal.git
-cd hpc-ssh-keys-portal
-.\make.ps1 setup
-.\make.ps1 run
-Requirements
-Docker and Docker Compose
-
-Make (Linux and macOS) or PowerShell (Windows)
-
-Installation and Setup
-Automatic (Recommended)
-bash
-Copy code
-make setup
-make run
-Manual
-Install Python 3.10+, Node.js, PostgreSQL
-
-Configure .env file
-
-Run backend and frontend separately
-
-Database Setup
-bash
-Copy code
-make migrate
-Or manually with Alembic migrations.
-
-Production Setup
-Reverse proxy with Nginx
-
-HTTPS via Let’s Encrypt
-
-systemd service files for backend and frontend
-
-Usage Guide
-Access portal at http://localhost:3000
-
-Login with administrator credentials
-
-Add SSH keys, users, and hosts via the dashboard
-
-Troubleshooting
-Check logs with make logs
-
-Rebuild containers with make rebuild
-
-Reset database with make reset-db
-
-API Documentation
-Backend provides interactive API documentation (Swagger UI):
-http://localhost:8000/docs
-
+Just Check Quick-Start.md file
 Makefile Automation
 Common commands:
 
