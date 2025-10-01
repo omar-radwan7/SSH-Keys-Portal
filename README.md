@@ -1,6 +1,287 @@
 # HPC SSH Keys Portal
 
+A comprehensive web-based portal for managing SSH keys across HPC (High Performance Computing) environments. The system provides centralized SSH key lifecycle management, automated deployment, user administration, and comprehensive auditing to operate securely at scale.
+
+## Why this project?
+
+HPC environments span many nodes and users. Manual SSH key distribution is error-prone, hard to audit, and risky. This portal:
+- Centralizes SSH key lifecycle management (creation, rotation, revocation)
+- Enforces consistent security policies across clusters
+- Automates deployment to managed hosts
+- Provides full auditing for compliance and forensics
+- Reduces operational toil and eliminates configuration drift
+
+## Features
+
+### Core Functionality
+- SSH Key Management: import existing keys, generate new keys, manage lifecycle
+- Automated Deployment: push authorized keys to many hosts via secure SSH
+- Multi-tenancy: multiple users with role-based access control
+- Key Lifecycle: expiration, rotation, revocation workflows
+- Audit Trail: complete logging of user/admin actions
+
+### User Features
+- Key import with validation
+- Key generation (client-side or server-side with secure download)
+- Manage personal keys and statuses (active, expired, revoked)
+- Multi-language UI
+
+### Administrative Features
+- User management (create, manage, roles)
+- Host management (add, configure, test HPC nodes)
+- Role-based authorization (admin, user, auditor)
+- Bulk operations (deploy to multiple hosts)
+- Metrics dashboard and policy enforcement
+
+### Security
+- LDAP/AD integration for enterprise auth
+- JWT-based authentication and granular authorization
+- Encrypted storage for sensitive data
+- Audit logging and key validation
+
+## Architecture
+
+### Backend (Python/FastAPI)
+- FastAPI with automatic API docs (Swagger/ReDoc)
+- SQLAlchemy ORM (PostgreSQL, SQLite)
+- Pydantic for validation
+- LDAP3 for directory integration
+- Paramiko for SSH operations
+- JWT and cryptography libraries
+
+### Frontend (React/TypeScript)
+- React 18 with TypeScript
+- Tailwind CSS for responsive UI
+- React Router for navigation
+- Axios for API integration
+
+### Database
+- Development: SQLite (file-based, auto-managed)
+- Production: PostgreSQL (performance, concurrency, tooling)
+
+## Usage Overview
+
+High-level flow without commands:
+- End users authenticate, import or generate SSH keys, and manage their lifecycle.
+- Administrators manage users and roles, register managed hosts, map users to remote accounts, deploy keys, and audit actions.
+
+## API Documentation
+
+The backend exposes comprehensive API documentation:
+- Swagger UI: http://localhost:3000/docs
+- ReDoc: http://localhost:3000/redoc
+- OpenAPI schema: http://localhost:3000/openapi.json
+
+## Contributing
+
+We welcome contributions! Please open an issue to discuss significant changes before submitting a PR. Use clear commit messages and include relevant context in your PR description.
+
+## License
+
+This project is licensed under the MIT License — see the LICENSE file for details.
+
+## Support
+
+For support and questions:
+- Create an issue in the repository
+- Review the API documentation
+- Check backend logs for detailed diagnostics
+
+---
+
+Note: This is a production-ready SSH key management system. Ensure proper security measures, backups, and access controls are in place before deploying to production.
+# HPC SSH Keys Portal
+
+A comprehensive web-based portal for managing SSH keys across HPC (High Performance Computing) environments. The system provides centralized SSH key lifecycle management, automated deployment, user administration, and comprehensive auditing to operate securely at scale.
+
+## Why this project?
+
+HPC environments span many nodes and users. Manual SSH key distribution is error-prone, hard to audit, and risky. This portal:
+- Centralizes SSH key lifecycle management (creation, rotation, revocation)
+- Enforces consistent security policies across clusters
+- Automates deployment to managed hosts
+- Provides full auditing for compliance and forensics
+- Reduces operational toil and eliminates configuration drift
+
+## Features
+
+### Core Functionality
+- SSH Key Management: import existing keys, generate new keys, manage lifecycle
+- Automated Deployment: push authorized keys to many hosts via secure SSH
+- Multi-tenancy: multiple users with role-based access control
+- Key Lifecycle: expiration, rotation, revocation workflows
+- Audit Trail: complete logging of user/admin actions
+
+### User Features
+- Key import with validation
+- Key generation (client-side or server-side with secure download)
+- Manage personal keys and statuses (active, expired, revoked)
+- Multi-language UI
+
+### Administrative Features
+- User management (create, manage, roles)
+- Host management (add, configure, test HPC nodes)
+- Role-based authorization (admin, user, auditor)
+- Bulk operations (deploy to multiple hosts)
+- Metrics dashboard and policy enforcement
+
+### Security
+- LDAP/AD integration for enterprise auth
+- JWT-based authentication and granular authorization
+- Encrypted storage for sensitive data
+- Audit logging and key validation
+
+## Architecture
+
+### Backend (Python/FastAPI)
+- FastAPI with automatic API docs (Swagger/ReDoc)
+- SQLAlchemy ORM (PostgreSQL, SQLite)
+- Pydantic for validation
+- LDAP3 for directory integration
+- Paramiko for SSH operations
+- JWT and cryptography libraries
+
+### Frontend (React/TypeScript)
+- React 18 with TypeScript
+- Tailwind CSS for responsive UI
+- React Router for navigation
+- Axios for API integration
+
+### Database
+- Development: SQLite (file-based, auto-managed)
+- Production: PostgreSQL (performance, concurrency, tooling)
+
+## API Documentation
+
+The backend exposes comprehensive API documentation:
+- Swagger UI: http://localhost:3000/docs
+- ReDoc: http://localhost:3000/redoc
+- OpenAPI schema: http://localhost:3000/openapi.json
+
+## Contributing
+
+We welcome contributions! Please open an issue to discuss significant changes before submitting a PR. Use clear commit messages and include relevant context in your PR description.
+
+## License
+
+This project is licensed under the MIT License — see the LICENSE file for details.
+
+## Support
+
+For support and questions:
+- Create an issue in the repository
+- Review the API documentation
+- Check backend logs for detailed diagnostics
+
+---
+
+Note: This is a production-ready SSH key management system. Ensure proper security measures, backups, and access controls are in place before deploying to production.
+# HPC SSH Keys Portal
+
+A comprehensive web-based portal for managing SSH keys across HPC (High Performance Computing) environments. The system provides centralized SSH key lifecycle management, automated deployment, user administration, and comprehensive auditing to operate securely at scale.
+
+## Why this project?
+
+HPC environments span many nodes and users. Manual SSH key distribution is error-prone, hard to audit, and risky. This portal:
+- Centralizes SSH key lifecycle management (creation, rotation, revocation)
+- Enforces consistent security policies across clusters
+- Automates deployment to managed hosts
+- Provides full auditing for compliance and forensics
+- Reduces operational toil and eliminates configuration drift
+
+## Features
+
+### Core Functionality
+- SSH Key Management: import existing keys, generate new keys, manage lifecycle
+- Automated Deployment: push authorized keys to many hosts via secure SSH
+- Multi-tenancy: multiple users with role-based access control
+- Key Lifecycle: expiration, rotation, revocation workflows
+- Audit Trail: complete logging of user/admin actions
+
+### User Features
+- Key import with validation
+- Key generation (client-side or server-side with secure download)
+- Manage personal keys and statuses (active, expired, revoked)
+- Multi-language UI
+
+### Administrative Features
+- User management (create, manage, roles)
+- Host management (add, configure, test HPC nodes)
+- Role-based authorization (admin, user, auditor)
+- Bulk operations (deploy to multiple hosts)
+- Metrics dashboard and policy enforcement
+
+### Security
+- LDAP/AD integration for enterprise auth
+- JWT-based authentication and granular authorization
+- Encrypted storage for sensitive data
+- Audit logging and key validation
+
+## Architecture
+
+### Backend (Python/FastAPI)
+- FastAPI with automatic API docs (Swagger/ReDoc)
+- SQLAlchemy ORM (PostgreSQL, SQLite)
+- Pydantic for validation
+- LDAP3 for directory integration
+- Paramiko for SSH operations
+- JWT and cryptography libraries
+
+### Frontend (React/TypeScript)
+- React 18 with TypeScript
+- Tailwind CSS for responsive UI
+- React Router for navigation
+- Axios for API integration
+
+### Database
+- Development: SQLite (file-based, auto-managed)
+- Production: PostgreSQL (performance, concurrency, tooling)
+
+## Usage Overview
+
+### For End Users
+1. Login with enterprise or local credentials
+2. Import or generate SSH keys
+3. Manage keys and view deployment status
+
+### For Administrators
+1. Manage users and roles
+2. Add managed HPC hosts and verify connectivity
+3. Map users to remote accounts and deploy keys
+4. Review audit logs and system metrics
+
+## API Documentation
+
+The backend exposes comprehensive API documentation:
+- Swagger UI: http://localhost:3000/docs
+- ReDoc: http://localhost:3000/redoc
+- OpenAPI schema: http://localhost:3000/openapi.json
+
+## Contributing
+
+We welcome contributions! Please open an issue to discuss significant changes before submitting a PR. Use clear commit messages and include relevant context in your PR description.
+
+## License
+
+This project is licensed under the MIT License — see the LICENSE file for details.
+
+## Support
+
+For support and questions:
+- Create an issue in the repository
+- Review the API documentation
+- Check backend logs for detailed diagnostics
+
+---
+
+Note: This is a production-ready SSH key management system. Ensure proper security measures, backups, and access controls are in place before deploying to production.
+# HPC SSH Keys Portal
+
 A comprehensive web-based portal for managing SSH keys across HPC (High Performance Computing) environments. This system provides centralized SSH key management, automated deployment, user administration, and comprehensive auditing capabilities.
+
+## Why this project?
+
+HPC environments often span many nodes and user accounts, making manual SSH key distribution error-prone and insecure. This portal centralizes key lifecycle management, enforces security policies, automates deployment to managed hosts, and provides full auditing so teams can maintain compliance and operational efficiency at scale.
 
 ## Zero-Dependency Quick Start
 
