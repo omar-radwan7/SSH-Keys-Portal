@@ -20,5 +20,5 @@ make status
 - API Docs: http://localhost:3000/docs
 
 If `make` is not found, run the platform bootstrap once, then retry the commands:
-- Windows: `bootstrap-windows.bat`
+- Windows (PowerShell): `./bootstrap-windows.bat` or `\.\bootstrap-windows.bat`
 - Linux: `chmod +x bootstrap.sh && ./bootstrap.sh`
