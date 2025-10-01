@@ -51,16 +51,4 @@ HPC environments span many nodes and users. Manual SSH key distribution is error
 
 ## Zero-Dependency Quick Start
 
-Works without installing Node, Python, or PostgreSQL manually.  
-Just Check Quick-Start.md file
-Makefile Automation
-Common commands:
-
-bash
-Copy code
-make setup       # Initial setup
-make run         # Start all services
-make stop        # Stop services
-make logs        # Tail logs
-make migrate     # Apply database migrations
-make rebuild     # Rebuild containers
+Works without installing Node, Python, or PostgreSQL manually, just check Quick-Start.md file
