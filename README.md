@@ -1,1 +1,960 @@
+# HPC SSH Keys Portal
 
+A comprehensive web-based portal for managing SSH keys across HPC (High Performance Computing) environments. The system provides centralized SSH key lifecycle management, automated deployment, user administration, and comprehensive auditing to operate securely at scale.
+
+## Why this project?
+
+HPC environments span many nodes and users. Manual SSH key distribution is error-prone, hard to audit, and risky. This portal:
+- Centralizes SSH key lifecycle management (creation, rotation, revocation)
+- Enforces consistent security policies across clusters
+- Automates deployment to managed hosts
+- Provides full auditing for compliance and forensics
+- Reduces operational toil and eliminates configuration drift
+
+## Features
+
+### Core Functionality
+- SSH Key Management: import existing keys, generate new keys, manage lifecycle
+- Automated Deployment: push authorized keys to many hosts via secure SSH
+- Multi-tenancy: multiple users with role-based access control
+- Key Lifecycle: expiration, rotation, revocation workflows
+- Audit Trail: complete logging of user/admin actions
+
+### User Features
+- Key import with validation
+- Key generation (client-side or server-side with secure download)
+- Manage personal keys and statuses (active, expired, revoked)
+- Multi-language UI
+
+### Administrative Features
+- User management (create, manage, roles)
+- Host management (add, configure, test HPC nodes)
+- Role-based authorization (admin, user, auditor)
+- Bulk operations (deploy to multiple hosts)
+- Metrics dashboard and policy enforcement
+
+### Security
+- LDAP/AD integration for enterprise auth
+- JWT-based authentication and granular authorization
+- Encrypted storage for sensitive data
+- Audit logging and key validation
+
+## Architecture
+
+### Backend (Python/FastAPI)
+- FastAPI with automatic API docs (Swagger/ReDoc)
+- SQLAlchemy ORM (PostgreSQL, SQLite)
+- Pydantic for validation
+- LDAP3 for directory integration
+- Paramiko for SSH operations
+- JWT and cryptography libraries
+
+### Frontend (React/TypeScript)
+- React 18 with TypeScript
+- Tailwind CSS for responsive UI
+- React Router for navigation
+- Axios for API integration
+
+### Database
+- Development: SQLite (file-based, auto-managed)
+- Production: PostgreSQL (performance, concurrency, tooling)
+
+## Usage Overview
+
+High-level flow without commands:
+- End users authenticate, import or generate SSH keys, and manage their lifecycle.
+- Administrators manage users and roles, register managed hosts, map users to remote accounts, deploy keys, and audit actions.
+
+## API Documentation
+
+The backend exposes comprehensive API documentation:
+- Swagger UI: http://localhost:3000/docs
+- ReDoc: http://localhost:3000/redoc
+- OpenAPI schema: http://localhost:3000/openapi.json
+
+## Contributing
+
+We welcome contributions! Please open an issue to discuss significant changes before submitting a PR. Use clear commit messages and include relevant context in your PR description.
+
+## License
+
+This project is licensed under the MIT License — see the LICENSE file for details.
+
+## Support
+
+For support and questions:
+- Create an issue in the repository
+- Review the API documentation
+- Check backend logs for detailed diagnostics
+
+---
+
+Note: This is a production-ready SSH key management system. Ensure proper security measures, backups, and access controls are in place before deploying to production.
+# HPC SSH Keys Portal
+
+A comprehensive web-based portal for managing SSH keys across HPC (High Performance Computing) environments. The system provides centralized SSH key lifecycle management, automated deployment, user administration, and comprehensive auditing to operate securely at scale.
+
+## Why this project?
+
+HPC environments span many nodes and users. Manual SSH key distribution is error-prone, hard to audit, and risky. This portal:
+- Centralizes SSH key lifecycle management (creation, rotation, revocation)
+- Enforces consistent security policies across clusters
+- Automates deployment to managed hosts
+- Provides full auditing for compliance and forensics
+- Reduces operational toil and eliminates configuration drift
+
+## Features
+
+### Core Functionality
+- SSH Key Management: import existing keys, generate new keys, manage lifecycle
+- Automated Deployment: push authorized keys to many hosts via secure SSH
+- Multi-tenancy: multiple users with role-based access control
+- Key Lifecycle: expiration, rotation, revocation workflows
+- Audit Trail: complete logging of user/admin actions
+
+### User Features
+- Key import with validation
+- Key generation (client-side or server-side with secure download)
+- Manage personal keys and statuses (active, expired, revoked)
+- Multi-language UI
+
+### Administrative Features
+- User management (create, manage, roles)
+- Host management (add, configure, test HPC nodes)
+- Role-based authorization (admin, user, auditor)
+- Bulk operations (deploy to multiple hosts)
+- Metrics dashboard and policy enforcement
+
+### Security
+- LDAP/AD integration for enterprise auth
+- JWT-based authentication and granular authorization
+- Encrypted storage for sensitive data
+- Audit logging and key validation
+
+## Architecture
+
+### Backend (Python/FastAPI)
+- FastAPI with automatic API docs (Swagger/ReDoc)
+- SQLAlchemy ORM (PostgreSQL, SQLite)
+- Pydantic for validation
+- LDAP3 for directory integration
+- Paramiko for SSH operations
+- JWT and cryptography libraries
+
+### Frontend (React/TypeScript)
+- React 18 with TypeScript
+- Tailwind CSS for responsive UI
+- React Router for navigation
+- Axios for API integration
+
+### Database
+- Development: SQLite (file-based, auto-managed)
+- Production: PostgreSQL (performance, concurrency, tooling)
+
+## API Documentation
+
+The backend exposes comprehensive API documentation:
+- Swagger UI: http://localhost:3000/docs
+- ReDoc: http://localhost:3000/redoc
+- OpenAPI schema: http://localhost:3000/openapi.json
+
+## Contributing
+
+We welcome contributions! Please open an issue to discuss significant changes before submitting a PR. Use clear commit messages and include relevant context in your PR description.
+
+## License
+
+This project is licensed under the MIT License — see the LICENSE file for details.
+
+## Support
+
+For support and questions:
+- Create an issue in the repository
+- Review the API documentation
+- Check backend logs for detailed diagnostics
+
+---
+
+Note: This is a production-ready SSH key management system. Ensure proper security measures, backups, and access controls are in place before deploying to production.
+# HPC SSH Keys Portal
+
+A comprehensive web-based portal for managing SSH keys across HPC (High Performance Computing) environments. The system provides centralized SSH key lifecycle management, automated deployment, user administration, and comprehensive auditing to operate securely at scale.
+
+## Why this project?
+
+HPC environments span many nodes and users. Manual SSH key distribution is error-prone, hard to audit, and risky. This portal:
+- Centralizes SSH key lifecycle management (creation, rotation, revocation)
+- Enforces consistent security policies across clusters
+- Automates deployment to managed hosts
+- Provides full auditing for compliance and forensics
+- Reduces operational toil and eliminates configuration drift
+
+## Features
+
+### Core Functionality
+- SSH Key Management: import existing keys, generate new keys, manage lifecycle
+- Automated Deployment: push authorized keys to many hosts via secure SSH
+- Multi-tenancy: multiple users with role-based access control
+- Key Lifecycle: expiration, rotation, revocation workflows
+- Audit Trail: complete logging of user/admin actions
+
+### User Features
+- Key import with validation
+- Key generation (client-side or server-side with secure download)
+- Manage personal keys and statuses (active, expired, revoked)
+- Multi-language UI
+
+### Administrative Features
+- User management (create, manage, roles)
+- Host management (add, configure, test HPC nodes)
+- Role-based authorization (admin, user, auditor)
+- Bulk operations (deploy to multiple hosts)
+- Metrics dashboard and policy enforcement
+
+### Security
+- LDAP/AD integration for enterprise auth
+- JWT-based authentication and granular authorization
+- Encrypted storage for sensitive data
+- Audit logging and key validation
+
+## Architecture
+
+### Backend (Python/FastAPI)
+- FastAPI with automatic API docs (Swagger/ReDoc)
+- SQLAlchemy ORM (PostgreSQL, SQLite)
+- Pydantic for validation
+- LDAP3 for directory integration
+- Paramiko for SSH operations
+- JWT and cryptography libraries
+
+### Frontend (React/TypeScript)
+- React 18 with TypeScript
+- Tailwind CSS for responsive UI
+- React Router for navigation
+- Axios for API integration
+
+### Database
+- Development: SQLite (file-based, auto-managed)
+- Production: PostgreSQL (performance, concurrency, tooling)
+
+## Usage Overview
+
+### For End Users
+1. Login with enterprise or local credentials
+2. Import or generate SSH keys
+3. Manage keys and view deployment status
+
+### For Administrators
+1. Manage users and roles
+2. Add managed HPC hosts and verify connectivity
+3. Map users to remote accounts and deploy keys
+4. Review audit logs and system metrics
+
+## API Documentation
+
+The backend exposes comprehensive API documentation:
+- Swagger UI: http://localhost:3000/docs
+- ReDoc: http://localhost:3000/redoc
+- OpenAPI schema: http://localhost:3000/openapi.json
+
+## Contributing
+
+We welcome contributions! Please open an issue to discuss significant changes before submitting a PR. Use clear commit messages and include relevant context in your PR description.
+
+## License
+
+This project is licensed under the MIT License — see the LICENSE file for details.
+
+## Support
+
+For support and questions:
+- Create an issue in the repository
+- Review the API documentation
+- Check backend logs for detailed diagnostics
+
+---
+
+Note: This is a production-ready SSH key management system. Ensure proper security measures, backups, and access controls are in place before deploying to production.
+# HPC SSH Keys Portal
+
+A comprehensive web-based portal for managing SSH keys across HPC (High Performance Computing) environments. This system provides centralized SSH key management, automated deployment, user administration, and comprehensive auditing capabilities.
+
+## Why this project?
+
+HPC environments often span many nodes and user accounts, making manual SSH key distribution error-prone and insecure. This portal centralizes key lifecycle management, enforces security policies, automates deployment to managed hosts, and provides full auditing so teams can maintain compliance and operational efficiency at scale.
+
+## Zero-Dependency Quick Start
+
+No manual installations required! Choose your platform:
+
+### Linux/macOS (using Makefile)
+
+```bash
+# Clone the repository
+git clone https://github.com/omar-radwan7/SSH-Keys-Portal.git
+cd SSH-Keys-Portal
+
+# ONE COMMAND SETUP - Installs everything automatically!
+make auto-setup
+
+# Start development servers
+make dev
+```
+
+### Windows (using PowerShell)
+
+```powershell
+# Clone the repository
+git clone https://github.com/omar-radwan7/SSH-Keys-Portal.git
+cd SSH-Keys-Portal
+
+# ONE COMMAND SETUP - Installs everything automatically!
+.\setup.ps1 auto-setup
+
+# Start development servers
+.\setup.ps1 dev
+```
+
+### Windows (using Command Prompt)
+
+```cmd
+# Clone the repository
+git clone https://github.com/omar-radwan7/SSH-Keys-Portal.git
+cd SSH-Keys-Portal
+
+# ONE COMMAND SETUP - Installs everything automatically!
+setup.bat auto-setup
+
+# Start development servers
+setup.bat dev
+```
+
+That's it! Access your application at:
+- **Frontend**: http://localhost:3001
+- **Backend API**: http://localhost:3000
+- **API Docs**: http://localhost:3000/docs
+
+### What make auto-setup Does Automatically
+
+- Detects your OS (Linux, macOS, Windows WSL)
+- Installs Python3 (if not present)
+- Installs Node.js & npm (if not present)
+- Installs Git (if not present)
+- Creates Python virtual environment
+- Installs all Python dependencies
+- Installs all Node.js dependencies
+- Initializes database
+- Ready to run!
+
+### Common Commands
+
+**Linux/macOS:**
+```bash
+make dev          # Start both servers
+make stop         # Stop all servers  
+make restart      # Restart servers
+make test         # Run all tests
+make status       # Check service status
+make clean        # Clean temporary files
+make help         # Show all available commands
+```
+
+**Windows PowerShell:**
+```powershell
+.\setup.ps1 dev           # Start both servers
+.\setup.ps1 dev-backend   # Start backend only
+.\setup.ps1 dev-frontend  # Start frontend only
+.\setup.ps1 test          # Run all tests
+.\setup.ps1 clean         # Clean temporary files
+.\setup.ps1 help          # Show all available commands
+```
+
+**Windows Command Prompt:**
+```cmd
+setup.bat dev           # Start both servers
+setup.bat dev-backend   # Start backend only
+setup.bat dev-frontend  # Start frontend only
+setup.bat test          # Run all tests
+setup.bat clean         # Clean temporary files
+setup.bat help          # Show all available commands
+```
+
+## Features
+
+### Core Functionality
+- **SSH Key Management**: Import existing keys, generate new keys (client-side or server-side), and manage key lifecycle
+- **Automated Deployment**: Deploy SSH keys to multiple managed hosts via secure SSH connections
+- **Multi-tenancy**: Support for multiple users with role-based access control
+- **Key Lifecycle**: Handle key expiration, rotation, and revocation
+- **Audit Trail**: Complete logging of all key operations and administrative actions
+
+### User Features
+- **Key Import**: Upload existing SSH public keys with validation
+- **Key Generation**:
+  - Client-side generation (keys generated in browser)
+  - Server-side generation (secure key generation with encrypted private key download)
+- **Key Management**: View, revoke, and manage personal SSH keys
+- **Multi-language Support**: Interface available in multiple languages
+- **Key Status Tracking**: Monitor key status (active, expired, revoked)
+
+### Administrative Features
+- **User Management**: Create, modify, and manage user accounts
+- **Host Management**: Add and configure managed HPC nodes
+- **Role-Based Access**: Admin, user, and auditor roles with appropriate permissions
+- **Bulk Operations**: Deploy keys to multiple hosts simultaneously
+- **System Metrics**: Dashboard with usage statistics and system health
+- **Policy Enforcement**: Configurable security policies for key algorithms and lengths
+
+### Security Features
+- **LDAP/AD Integration**: Enterprise directory authentication support
+- **JWT Authentication**: Secure session management
+- **Role-Based Authorization**: Granular permission system
+- **Encrypted Storage**: Secure storage of sensitive data
+- **Audit Logging**: Comprehensive activity tracking
+- **Key Validation**: Automatic validation of SSH key formats and security
+
+## Architecture
+
+### Backend (Python/FastAPI)
+- **FastAPI**: Modern, fast web framework with automatic API documentation
+- **SQLAlchemy**: Database ORM with support for PostgreSQL and SQLite
+- **Pydantic**: Data validation and serialization
+- **LDAP3**: Enterprise directory integration
+- **Paramiko**: SSH automation for key deployment
+- **JWT**: Secure authentication tokens
+- **Cryptography**: Advanced cryptographic operations
+
+### Frontend (React/TypeScript)
+- **React 18**: Modern React with hooks and functional components
+- **TypeScript**: Type-safe JavaScript development
+- **Tailwind CSS**: Utility-first CSS framework for responsive design
+- **React Router**: Client-side routing
+- **Axios**: HTTP client for API communication
+- **Lucide React**: Beautiful, customizable icons
+
+### Database
+The application supports two database systems:
+
+#### Development Database (SQLite)
+- **Location**: `backend-py/hpc_ssh_portal.db`
+- **Type**: SQLite file database
+- **Setup**: Automatically created when the application starts
+- **Advantages**: No installation required, perfect for development and testing
+- **Storage**: All data stored in a single file
+
+#### Production Database (PostgreSQL)
+- **Type**: PostgreSQL 14+ (recommended for production)
+- **Features**: Better performance, concurrent access, advanced features
+- **Backup Support**: Built-in backup and recovery tools
+- **Scalability**: Handles multiple users and large datasets efficiently
+
+## Requirements
+
+### Automated Setup (Recommended)
+
+No manual installations needed! The Makefile handles everything automatically:
+- **Operating System**: Linux, macOS, or Windows WSL
+- **Dependencies**: Automatically installed (Python3, Node.js, Git, pip, npm)
+- **Database**: SQLite (auto-created) or PostgreSQL (for production)
+
+### Manual Setup Requirements (Advanced)
+
+If you prefer manual installation:
+- **Python**: 3.11 or higher
+- **Node.js**: 18 or higher
+- **Database**: PostgreSQL 14+ (production) or SQLite (development)
+- **Operating System**: Linux, macOS, or Windows
+
+### Network Requirements
+
+- Portal server to LDAP/AD server (ports 389/636) - if using LDAP authentication
+- Portal server to managed HPC nodes (port 22) - for SSH key deployment
+- Users to portal web interface (ports 3000/3001)
+
+## Installation and Setup
+
+### Recommended: Automated Setup (Zero Dependencies)
+
+Use the automated Makefile setup above for the easiest experience!
+
+Simply run:
+```bash
+make auto-setup  # Installs everything automatically
+make dev         # Start development servers
+```
+
+### Manual Setup (Advanced Users)
+
+<details>
+<summary>Click to expand manual installation instructions</summary>
+
+#### System Requirements
+- **Python**: 3.11 or higher
+- **Node.js**: 18 or higher  
+- **Database**: PostgreSQL 14+ (production) or SQLite (development)
+
+#### 1. Clone the Repository
+```bash
+git clone https://github.com/omar-radwan7/SSH-Keys-Portal.git
+cd SSH-Keys-Portal
+```
+
+#### 2. Backend Setup
+```bash
+# Navigate to backend directory
+cd backend-py
+
+# Create virtual environment (recommended)
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Create environment file
+cp ../env.example .env
+
+# Edit .env file for development
+cat > .env << 'EOF'
+ENV=development
+USE_SQLITE=true
+JWT_SECRET=dev-secret-change-in-production
+SYSGEN_ENCRYPTION_KEY=dev-sysgen-key-change-in-production
+ALLOW_TEST_LOGIN=true
+APPLY_SSH_USER=root
+APPLY_SSH_KEY_PATH=~/.ssh/id_rsa
+APPLY_STRICT_HOST_KEY_CHECK=false
+FRONTEND_URL=http://localhost:3001
+EOF
+
+# Start the backend server
+python -m uvicorn app.main:app --host 0.0.0.0 --port 3000 --reload
+```
+
+#### 3. Frontend Setup
+Open a new terminal:
+```bash
+# Navigate to frontend directory
+cd frontend
+
+# Install dependencies
+npm install
+
+# Create environment file
+cat > .env << 'EOF'
+REACT_APP_API_BASE_URL=http://localhost:3000/api/v1
+REACT_APP_ALLOW_TEST_LOGIN=true
+EOF
+
+# Start the development server
+npm start
+```
+
+#### 4. Access the Application
+- **Frontend**: http://localhost:3001
+- **Backend API**: http://localhost:3000
+- **API Documentation**: http://localhost:3000/docs
+- **Health Check**: http://localhost:3000/health
+
+#### 5. Default Credentials (Development)
+- **Admin**: admin / admin
+- **Test User**: Available via test login (if enabled)
+
+</details>
+
+## Database Setup Details
+
+### SQLite Database (Development)
+The SQLite database is automatically managed:
+
+**Database Location**: `backend-py/hpc_ssh_portal.db`
+
+**Database Tables**:
+- `users` - User accounts and authentication
+- `ssh_keys` - SSH public keys with metadata
+- `managed_hosts` - HPC nodes configuration
+- `user_host_accounts` - User-to-host account mappings
+- `deployments` - Key deployment tracking
+- `policies` - Security policies and rules
+- `audit_events` - Complete audit log
+- `system_gen_requests` - Server-generated key requests
+
+**Database Migrations**: Automatically applied on startup
+
+**Backup SQLite Database**:
+```bash
+# Simple file copy
+cp backend-py/hpc_ssh_portal.db backup_$(date +%Y%m%d).db
+
+# Or use SQLite dump
+sqlite3 backend-py/hpc_ssh_portal.db .dump > backup_$(date +%Y%m%d).sql
+```
+
+### PostgreSQL Database (Production)
+
+#### Install PostgreSQL
+
+**Ubuntu/Debian**:
+```bash
+sudo apt update
+sudo apt install postgresql postgresql-contrib
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+```
+
+**RHEL/CentOS/Fedora**:
+```bash
+sudo dnf install postgresql postgresql-server postgresql-contrib
+sudo postgresql-setup --initdb
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+```
+
+**macOS**:
+```bash
+brew install postgresql
+brew services start postgresql
+```
+
+#### Create Database and User
+```bash
+# Switch to postgres user
+sudo -u postgres psql
+
+# Create database and user
+CREATE DATABASE hpc_ssh_portal;
+CREATE USER ssh_portal_user WITH ENCRYPTED PASSWORD 'secure_password_here';
+GRANT ALL PRIVILEGES ON DATABASE hpc_ssh_portal TO ssh_portal_user;
+ALTER USER ssh_portal_user CREATEDB;
+\q
+```
+
+#### Configure Backend for PostgreSQL
+```bash
+cd backend-py
+cat > .env << 'EOF'
+ENV=production
+USE_SQLITE=false
+DATABASE_URL=postgresql+psycopg2://ssh_portal_user:secure_password_here@localhost:5432/hpc_ssh_portal
+JWT_SECRET=your-super-secure-jwt-secret-change-this
+SYSGEN_ENCRYPTION_KEY=your-encryption-key-change-this
+ALLOW_TEST_LOGIN=false
+APPLY_SSH_USER=root
+APPLY_SSH_KEY_PATH=~/.ssh/id_rsa
+APPLY_STRICT_HOST_KEY_CHECK=false
+FRONTEND_URL=https://your-domain.com
+EOF
+```
+
+#### Database Backup (PostgreSQL)
+```bash
+# Create backup
+pg_dump -h localhost -U ssh_portal_user -d hpc_ssh_portal > backup_$(date +%Y%m%d).sql
+
+# Restore backup
+psql -h localhost -U ssh_portal_user -d hpc_ssh_portal < backup_file.sql
+```
+
+## Production Setup
+
+### Environment Configuration
+
+#### Backend (.env)
+```bash
+# Application
+ENV=production
+APP_NAME=HPC SSH Keys Portal
+PORT=3000
+FRONTEND_URL=https://your-domain.com
+
+# Database
+USE_SQLITE=false
+DATABASE_URL=postgresql+psycopg2://ssh_portal_user:password@localhost:5432/hpc_ssh_portal
+
+# Security
+JWT_SECRET=your-super-secure-jwt-secret-here
+JWT_EXPIRES_HOURS=24
+SYSGEN_ENCRYPTION_KEY=your-encryption-key-for-private-keys
+SYSGEN_DOWNLOAD_TTL_MIN=10
+
+# Authentication
+ALLOW_TEST_LOGIN=false
+
+# LDAP/AD (optional)
+LDAP_URL=ldap://your-ldap-server:389
+LDAP_BASE_DN=dc=company,dc=com
+LDAP_USER_FILTER=(sAMAccountName={username})
+LDAP_GROUP_FILTER=(member={user_dn})
+LDAP_ADMIN_GROUPS=cn=SSH-Admins,ou=Groups,dc=company,dc=com
+LDAP_AUDITOR_GROUPS=cn=SSH-Auditors,ou=Groups,dc=company,dc=com
+
+# SSH Deployment
+APPLY_SSH_USER=automation
+APPLY_SSH_KEY_PATH=/etc/ssh-portal/automation_key
+APPLY_STRICT_HOST_KEY_CHECK=true
+```
+
+#### Frontend (.env)
+```bash
+REACT_APP_API_BASE_URL=https://your-domain.com/api/v1
+REACT_APP_ALLOW_TEST_LOGIN=false
+```
+
+### SSH Key Deployment Setup
+
+The portal needs SSH access to managed hosts to deploy authorized_keys files:
+
+1. **Generate SSH key for automation**:
+```bash
+ssh-keygen -t ed25519 -f /etc/ssh-portal/automation_key -N ""
+```
+
+2. **Deploy public key to managed hosts**:
+```bash
+# Copy to each managed host
+ssh-copy-id -i /etc/ssh-portal/automation_key.pub automation@hpc-node-1
+ssh-copy-id -i /etc/ssh-portal/automation_key.pub automation@hpc-node-2
+```
+
+3. **Configure appropriate permissions**:
+```bash
+chmod 600 /etc/ssh-portal/automation_key
+chown ssh-portal:ssh-portal /etc/ssh-portal/automation_key
+```
+
+### Production Deployment
+
+#### Option 1: Systemd Services
+
+**Backend Service** (`/etc/systemd/system/ssh-portal-backend.service`):
+```ini
+[Unit]
+Description=SSH Portal Backend
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=ssh-portal
+Group=ssh-portal
+WorkingDirectory=/opt/ssh-portal/backend-py
+Environment=PATH=/opt/ssh-portal/backend-py/venv/bin
+ExecStart=/opt/ssh-portal/backend-py/venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 3000
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Frontend (Nginx Configuration)**:
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    # Frontend static files
+    location / {
+        root /opt/ssh-portal/frontend/build;
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Backend API proxy
+    location /api/ {
+        proxy_pass http://localhost:3000/api/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Health check
+    location /health {
+        proxy_pass http://localhost:3000/health;
+    }
+}
+```
+
+#### Option 2: Docker Deployment
+
+**docker-compose.yml**:
+```yaml
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: hpc_ssh_portal
+      POSTGRES_USER: ssh_portal_user
+      POSTGRES_PASSWORD: secure_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend-py
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://ssh_portal_user:secure_password@postgres:5432/hpc_ssh_portal
+      - USE_SQLITE=false
+    depends_on:
+      - postgres
+    volumes:
+      - ./ssh-keys:/etc/ssh-portal
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+```
+
+## Usage Guide
+
+### For End Users
+
+1. **Login**: Use your credentials (LDAP/AD or local account)
+2. **Import SSH Key**: Upload your existing public key
+3. **Generate New Key**:
+   - Client-side: Generate in browser (more secure)
+   - Server-side: Generate on server (convenient, one-time download)
+4. **Manage Keys**: View status, revoke keys, download private keys (server-generated only)
+
+### For Administrators
+
+1. **User Management**:
+   - Create new user accounts
+   - Assign roles (user, admin, auditor)
+   - Reset passwords and manage user status
+
+2. **Host Management**:
+   - Add managed HPC nodes
+   - Configure SSH connection details
+   - Test connectivity
+
+3. **Key Deployment**:
+   - Select target hosts
+   - Specify target username on remote hosts
+   - Deploy all active keys to managed hosts
+
+4. **System Monitoring**:
+   - View usage statistics
+   - Monitor system health
+   - Review audit logs
+
+## Troubleshooting
+
+### Common Issues
+
+#### Login Loop
+Clear browser storage:
+```javascript
+localStorage.clear();
+sessionStorage.clear();
+location.reload();
+```
+
+#### SSH Deployment Failures
+- Verify SSH connectivity to target hosts
+- Check SSH key permissions and paths
+- Ensure target user exists on remote hosts
+- Review backend logs for detailed error messages
+
+#### Database Connection Issues
+- Verify PostgreSQL is running and accessible
+- Check database credentials and connection string
+- Ensure database exists and user has proper permissions
+
+#### LDAP Authentication Problems
+- Test LDAP connectivity from the server
+- Verify LDAP configuration parameters
+- Check user DN format and group memberships
+
+#### Backend Won't Start
+- Check Python version (3.11+ required)
+- Verify all dependencies are installed: `pip install -r requirements.txt`
+- Ensure `.env` file exists with required variables
+- Check port 3000 is not already in use: `lsof -i :3000`
+
+#### Frontend Won't Start
+- Check Node.js version (18+ required)
+- Verify dependencies are installed: `npm install`
+- Ensure `.env` file exists in frontend directory
+- Check port 3001 is not already in use: `lsof -i :3001`
+
+### Health Checks
+
+- **Backend API**: `GET http://localhost:3000/health` → `{"success": true}`
+- **Database**: Check connection in backend logs
+- **Frontend**: Verify static files are served correctly
+
+## API Documentation
+
+The backend provides comprehensive API documentation via FastAPI's automatic documentation:
+
+- **Swagger UI**: http://localhost:3000/docs
+- **ReDoc**: http://localhost:3000/redoc
+- **OpenAPI Schema**: http://localhost:3000/openapi.json
+
+## Makefile Automation
+
+The project includes comprehensive Makefile automation for all common tasks:
+
+### Development Commands
+
+```bash
+make dev              # Start both backend and frontend
+make dev-backend      # Start only backend server
+make dev-frontend     # Start only frontend server
+make stop             # Stop all development servers
+make restart          # Restart development servers
+```
+
+### Setup and Installation
+
+```bash
+make auto-setup       # Full automated setup (installs everything)
+make install          # Install dependencies only
+make setup-venv       # Create Python virtual environment
+make check-system     # Check and install system dependencies
+```
+
+### Testing and Quality
+
+```bash
+make test             # Run all tests
+make test-backend     # Run backend tests only
+make test-frontend    # Run frontend tests only
+make lint             # Run code linting
+make format           # Format all code
+```
+
+### Database Operations
+
+```bash
+make db-migrate       # Run database migrations
+make db-backup        # Create database backup
+make db-reset         # Reset database (WARNING: DESTRUCTIVE)
+```
+
+### Docker Support
+
+```bash
+make docker-build     # Build Docker images
+make docker-up        # Start with Docker Compose
+make docker-down      # Stop Docker services
+```
+
+### Monitoring and Utilities
+
+```bash
+make status           # Check service status
+make health-check     # Comprehensive health check
+make clean            # Clean temporary files
+make backup           # Create full project backup
+make update           # Update all dependencies
+make help             # Show all available commands
+```
